@@ -50,7 +50,11 @@ auth.post('/google', async (c) => {
     c.env.JWT_SECRET,
     c.env.JWT_EXPIRES_IN ?? '7d'
   );
-  return ok(c, result, 'Google sign-in successful');
+  return ok(
+    c,
+    result,
+    'mfaRequired' in result ? 'MFA verification required' : 'Google sign-in successful'
+  );
 });
 
 auth.post('/login', async (c) => {
@@ -66,7 +70,27 @@ auth.post('/login', async (c) => {
     c.env.JWT_SECRET,
     c.env.JWT_EXPIRES_IN ?? '7d'
   );
-  return ok(c, result, 'Login successful');
+  return ok(c, result, 'mfaRequired' in result ? 'MFA verification required' : 'Login successful');
+});
+
+auth.post('/mfa/verify', async (c) => {
+  if (!c.env.JWT_SECRET) {
+    return fail(c, 'Server configuration error: JWT_SECRET is not set', 500);
+  }
+  const body = z.object({
+    challengeToken: z.string().min(1).max(4096),
+    code: z.string().min(1).max(64),
+  }).parse(await c.req.json());
+  const db = createDb(c.env.DATABASE_URL);
+  const result = await authService.completeMfaLogin(
+    db,
+    body.challengeToken,
+    body.code,
+    c.env.JWT_SECRET,
+    c.env.JWT_EXPIRES_IN ?? '7d',
+    c.env.MFA_ENCRYPTION_KEY
+  );
+  return ok(c, result, 'MFA verification successful');
 });
 
 // ─── Protected routes (per-route authMiddleware) ────────────────────────────
@@ -81,6 +105,53 @@ auth.put('/me', authMiddleware, async (c) => {
   const db = createDb(c.env.DATABASE_URL);
   const user = await authService.updateOwnProfile(db, c.get('userId'), body);
   return ok(c, { user }, 'Profile updated');
+});
+
+auth.post('/mfa/enrollment', authMiddleware, adminOnly, async (c) => {
+  const body = z.object({ currentPassword: z.string().min(1).max(128) }).parse(await c.req.json());
+  const db = createDb(c.env.DATABASE_URL);
+  const enrollment = await authService.beginMfaEnrollment(
+    db,
+    c.get('userId'),
+    body.currentPassword,
+    c.env.MFA_ENCRYPTION_KEY
+  );
+  return ok(c, enrollment, 'MFA setup started');
+});
+
+auth.post('/mfa/enable', authMiddleware, adminOnly, async (c) => {
+  const body = z.object({ code: z.string().length(6) }).parse(await c.req.json());
+  const db = createDb(c.env.DATABASE_URL);
+  const result = await authService.confirmMfaEnrollment(
+    db,
+    c.get('userId'),
+    body.code,
+    c.env.JWT_SECRET,
+    c.env.JWT_EXPIRES_IN ?? '7d',
+    c.env.MFA_ENCRYPTION_KEY
+  );
+  return ok(c, result, 'MFA enabled. Save your recovery codes now.');
+});
+
+auth.post('/mfa/disable', authMiddleware, adminOnly, async (c) => {
+  const body = z.object({
+    currentPassword: z.string().min(1).max(128),
+    code: z.string().length(6),
+  }).parse(await c.req.json());
+  const db = createDb(c.env.DATABASE_URL);
+  if (!c.env.JWT_SECRET) {
+    return fail(c, 'Server configuration error: JWT_SECRET is not set', 500);
+  }
+  const result = await authService.disableMfa(
+    db,
+    c.get('userId'),
+    body.currentPassword,
+    body.code,
+    c.env.JWT_SECRET,
+    c.env.JWT_EXPIRES_IN ?? '7d',
+    c.env.MFA_ENCRYPTION_KEY
+  );
+  return ok(c, result, 'MFA disabled');
 });
 
 auth.put('/me/email', authMiddleware, async (c) => {

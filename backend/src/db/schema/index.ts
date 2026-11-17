@@ -28,9 +28,40 @@ export const users = pgTable(
     name: text('name').notNull(),
     role: text('role').$type<'ADMIN' | 'CASHIER'>().notNull().default('CASHIER'),
     isActive: boolean('is_active').notNull().default(true),
+    authVersion: integer('auth_version').notNull().default(0),
+    mfaEnabled: boolean('mfa_enabled').notNull().default(false),
+    mfaSecretEncrypted: text('mfa_secret_encrypted'),
+    mfaPendingSecretEncrypted: text('mfa_pending_secret_encrypted'),
+    mfaPendingExpiresAt: timestamp('mfa_pending_expires_at', {
+      withTimezone: true,
+      mode: 'date',
+    }),
+    mfaPendingAttempts: integer('mfa_pending_attempts').notNull().default(0),
+    mfaRecoveryCodeHashes: text('mfa_recovery_code_hashes').notNull().default('[]'),
+    mfaLastUsedStep: bigint('mfa_last_used_step', { mode: 'number' }).notNull().default(-1),
+    mfaFailedAttempts: integer('mfa_failed_attempts').notNull().default(0),
+    mfaFailedAt: timestamp('mfa_failed_at', { withTimezone: true, mode: 'date' }),
+    mfaLockedUntil: timestamp('mfa_locked_until', { withTimezone: true, mode: 'date' }),
     ...timestamps,
   },
   (t) => [index('users_email_idx').on(t.email)]
+);
+
+export const mfaLoginChallenges = pgTable(
+  'mfa_login_challenges',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    expiresAt: timestamp('expires_at', { withTimezone: true, mode: 'date' }).notNull(),
+    attempts: integer('attempts').notNull().default(0),
+    consumedAt: timestamp('consumed_at', { withTimezone: true, mode: 'date' }),
+  },
+  (t) => [
+    index('mfa_login_challenges_user_id_idx').on(t.userId),
+    index('mfa_login_challenges_expires_at_idx').on(t.expiresAt),
+  ]
 );
 
 export const categories = pgTable('categories', {
@@ -249,4 +280,5 @@ export const schema = {
   stockHistory,
   settings,
   backups,
+  mfaLoginChallenges,
 };

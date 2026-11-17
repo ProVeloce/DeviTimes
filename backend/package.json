@@ -8,18 +8,19 @@
     "build": "tsc -p tsconfig.build.json",
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test tests/password.test.ts tests/google-drive-backup.test.ts tests/auth.test.ts tests/vercel.test.ts",
+    "test": "tsx --test tests/password.test.ts tests/google-drive-backup.test.ts tests/auth.test.ts tests/mfa.test.ts tests/vercel.test.ts",
     "db:generate": "drizzle-kit generate",
     "db:studio": "drizzle-kit studio",
     "db:check": "tsx scripts/check-db.ts",
     "db:migrate": "drizzle-kit migrate"
   },
   "dependencies": {
-    "drizzle-orm": "^0.44.2",
+    "argon2": "^0.43.0",
     "dotenv": "^16.6.1",
+    "drizzle-orm": "^0.44.2",
     "hono": "^4.8.3",
     "jose": "^6.0.11",
-    "argon2": "^0.43.0",
+    "otpauth": "^9.6.0",
     "pg": "^8.16.3",
     "zod": "^3.25.28"
   },

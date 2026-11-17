@@ -7,7 +7,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { PasswordInput } from '@/components/ui/password-input';
 import { Label } from '@/components/ui/label';
-import { getGoogleLoginConfig, login, loginWithGoogle } from '@/services/auth.service';
+import {
+  getGoogleLoginConfig,
+  login,
+  loginWithGoogle,
+  verifyMfaLogin,
+  type LoginResult,
+} from '@/services/auth.service';
 import { useAuthStore } from '@/store/auth.store';
 import { toast } from '@/components/ui/toast';
 import { ApiError } from '@/lib/api';
@@ -25,8 +31,26 @@ export function LoginPage() {
   const [googleConfigFailed, setGoogleConfigFailed] = useState(false);
   const [googleScriptReady, setGoogleScriptReady] = useState(false);
   const [googleScriptFailed, setGoogleScriptFailed] = useState(false);
+  const [mfaChallengeToken, setMfaChallengeToken] = useState<string | null>(null);
+  const [mfaCode, setMfaCode] = useState('');
+  const [mfaError, setMfaError] = useState<string | null>(null);
+  const [mfaUseRecoveryCode, setMfaUseRecoveryCode] = useState(false);
+  const [mfaLoading, setMfaLoading] = useState(false);
   const setAuth = useAuthStore((s) => s.setAuth);
   const navigate = useNavigate();
+
+  const handleLoginResult = (result: LoginResult) => {
+    if ('mfaRequired' in result) {
+      setMfaChallengeToken(result.challengeToken);
+      setMfaCode('');
+      setMfaError(null);
+      return;
+    }
+
+    setAuth(result.token, result.user);
+    toast('Welcome back', `Signed in as ${result.user.name}`);
+    navigate('/pos');
+  };
 
   useEffect(() => {
     let active = true;
@@ -75,15 +99,31 @@ export function LoginPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      const { token, user } = await login(username, password);
-      setAuth(token, user);
-      toast('Welcome back', `Signed in as ${user.name}`);
-      navigate('/pos');
+      handleLoginResult(await login(username, password));
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : 'Login failed';
       toast('Login failed', msg, 'error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleMfaSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!mfaChallengeToken) return;
+
+    setMfaLoading(true);
+    setMfaError(null);
+    try {
+      const result = await verifyMfaLogin(mfaChallengeToken, mfaCode.trim());
+      handleLoginResult(result);
+    } catch (error) {
+      const message = error instanceof ApiError
+        ? error.message
+        : error instanceof Error ? error.message : 'MFA verification failed.';
+      setMfaError(message);
+    } finally {
+      setMfaLoading(false);
     }
   };
 
@@ -108,11 +148,7 @@ export function LoginPage() {
 
         setGoogleLoading(true);
         loginWithGoogle(response.code)
-          .then(({ token, user }) => {
-            setAuth(token, user);
-            toast('Welcome back', `Signed in as ${user.name}`);
-            navigate('/pos');
-          })
+          .then(handleLoginResult)
           .catch((error: unknown) => {
             const message = error instanceof ApiError
               ? error.message
@@ -181,91 +217,170 @@ export function LoginPage() {
             </p>
           </div>
 
-          <form
-            onSubmit={handleSubmit}
-            className="surface-card space-y-5 p-6 sm:p-8"
-          >
-            <div className="space-y-2">
-              <Label htmlFor="username">Username</Label>
-              <Input
-                id="username"
-                type="text"
-                inputMode="numeric"
-                autoComplete="username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="Enter username"
-                className="h-10"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <PasswordInput
-                id="password"
-                autoComplete="current-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter password"
-                className="h-10"
-                required
-              />
-            </div>
-            <Button
-              type="submit"
-              className="h-10 w-full"
-              variant="accent"
-              disabled={loading || googleLoading}
+          {mfaChallengeToken ? (
+            <form
+              onSubmit={handleMfaSubmit}
+              className="surface-card space-y-5 p-6 sm:p-8"
             >
-              {loading ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Signing in…
-                </>
-              ) : (
-                'Continue'
+              <div>
+                <h3 className="text-base font-medium text-[var(--color-foreground)]">
+                  Verify your sign-in
+                </h3>
+                <p className="mt-1 text-sm leading-relaxed text-[var(--color-muted-foreground)]">
+                  {mfaUseRecoveryCode
+                    ? 'Enter one of your saved recovery codes. Each code works once.'
+                    : 'Enter the current six-digit code from Google Authenticator.'}
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="mfa-code">
+                  {mfaUseRecoveryCode ? 'Recovery code' : '6-digit code'}
+                </Label>
+                <Input
+                  id="mfa-code"
+                  type="text"
+                  inputMode={mfaUseRecoveryCode ? 'text' : 'numeric'}
+                  autoComplete="one-time-code"
+                  maxLength={mfaUseRecoveryCode ? 32 : 6}
+                  pattern={mfaUseRecoveryCode ? undefined : '[0-9]{6}'}
+                  value={mfaCode}
+                  onChange={(event) => setMfaCode(event.target.value)}
+                  className="h-10"
+                  required
+                />
+              </div>
+              {mfaError && (
+                <p className="text-sm text-red-600" role="alert">{mfaError}</p>
               )}
-            </Button>
-          </form>
+              <Button
+                type="submit"
+                className="h-10 w-full"
+                variant="accent"
+                disabled={mfaLoading || (!mfaUseRecoveryCode && mfaCode.length !== 6)}
+              >
+                {mfaLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Verifying…
+                  </>
+                ) : (
+                  'Verify and sign in'
+                )}
+              </Button>
+              <div className="flex items-center justify-between gap-3 text-sm">
+                <button
+                  type="button"
+                  className="text-[var(--color-primary)] underline underline-offset-4 hover:opacity-80"
+                  onClick={() => {
+                    setMfaUseRecoveryCode((current) => !current);
+                    setMfaCode('');
+                    setMfaError(null);
+                  }}
+                >
+                  {mfaUseRecoveryCode ? 'Use authenticator code' : 'Use a recovery code'}
+                </button>
+                <button
+                  type="button"
+                  className="text-[var(--color-muted-foreground)] underline underline-offset-4 hover:text-[var(--color-foreground)]"
+                  onClick={() => {
+                    setMfaChallengeToken(null);
+                    setMfaCode('');
+                    setMfaError(null);
+                  }}
+                >
+                  Back to sign in
+                </button>
+              </div>
+            </form>
+          ) : (
+            <>
+              <form
+                onSubmit={handleSubmit}
+                className="surface-card space-y-5 p-6 sm:p-8"
+              >
+                <div className="space-y-2">
+                  <Label htmlFor="username">Username</Label>
+                  <Input
+                    id="username"
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="username"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="Enter username"
+                    className="h-10"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <PasswordInput
+                    id="password"
+                    autoComplete="current-password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Enter password"
+                    className="h-10"
+                    required
+                  />
+                </div>
+                <Button
+                  type="submit"
+                  className="h-10 w-full"
+                  variant="accent"
+                  disabled={loading || googleLoading}
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Signing in…
+                    </>
+                  ) : (
+                    'Continue'
+                  )}
+                </Button>
+              </form>
 
-          <div className="my-4 flex items-center gap-3 text-xs text-[var(--color-muted-foreground)]">
-            <span className="h-px flex-1 bg-[var(--color-border)]" />
-            or
-            <span className="h-px flex-1 bg-[var(--color-border)]" />
-          </div>
-          <Button
-            type="button"
-            variant="outline"
-            className="h-10 w-full"
-            onClick={handleGoogleSignIn}
-            disabled={
-              !googleConfig?.configured ||
-              !googleScriptReady ||
-              loading ||
-              googleLoading
-            }
-          >
-            {googleLoading || (
-              googleConfig?.configured && !googleScriptReady
-            )
-              ? <Loader2 className="h-4 w-4 animate-spin" />
-              : <img src={googleLogo} alt="" aria-hidden="true" className="h-4 w-4 object-contain" />}
-            {googleLoading
-              ? 'Signing in with Google…'
-              : !googleConfig
-                ? 'Checking Google sign-in…'
-                : googleConfig.configured && !googleScriptReady
-                  ? 'Loading Google sign-in…'
-                  : 'Sign in with Google'}
-          </Button>
-          {(googleConfigFailed || googleScriptFailed || googleConfig?.configured === false) && (
-            <p className="mt-2 text-center text-xs text-[var(--color-muted-foreground)]" role="status">
-              {googleScriptFailed
-                ? 'Google sign-in could not load. Check your internet connection and refresh.'
-                : googleConfigFailed
-                  ? 'Google sign-in configuration could not be checked. Try again online.'
-                  : 'Google sign-in is not configured for this application yet.'}
-            </p>
+              <div className="my-4 flex items-center gap-3 text-xs text-[var(--color-muted-foreground)]">
+                <span className="h-px flex-1 bg-[var(--color-border)]" />
+                or
+                <span className="h-px flex-1 bg-[var(--color-border)]" />
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-10 w-full"
+                onClick={handleGoogleSignIn}
+                disabled={
+                  !googleConfig?.configured ||
+                  !googleScriptReady ||
+                  loading ||
+                  googleLoading
+                }
+              >
+                {googleLoading || (
+                  googleConfig?.configured && !googleScriptReady
+                )
+                  ? <Loader2 className="h-4 w-4 animate-spin" />
+                  : <img src={googleLogo} alt="" aria-hidden="true" className="h-4 w-4 object-contain" />}
+                {googleLoading
+                  ? 'Signing in with Google…'
+                  : !googleConfig
+                    ? 'Checking Google sign-in…'
+                    : googleConfig.configured && !googleScriptReady
+                      ? 'Loading Google sign-in…'
+                      : 'Sign in with Google'}
+              </Button>
+              {(googleConfigFailed || googleScriptFailed || googleConfig?.configured === false) && (
+                <p className="mt-2 text-center text-xs text-[var(--color-muted-foreground)]" role="status">
+                  {googleScriptFailed
+                    ? 'Google sign-in could not load. Check your internet connection and refresh.'
+                    : googleConfigFailed
+                      ? 'Google sign-in configuration could not be checked. Try again online.'
+                      : 'Google sign-in is not configured for this application yet.'}
+                </p>
+              )}
+            </>
           )}
 
           <nav

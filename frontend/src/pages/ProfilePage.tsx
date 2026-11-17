@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Loader2 } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 import googleLogo from '@/assets/google-logo.svg';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -16,12 +17,18 @@ import { Label } from '@/components/ui/label';
 import { PasswordInput } from '@/components/ui/password-input';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { toast } from '@/components/ui/toast';
+import { downloadBlob } from '@/lib/api';
 import {
+  beginMfaEnrollment,
   changeMyEmail,
+  confirmMfaEnrollment,
+  disableMfa,
   getGoogleEmailVerificationConfig,
   getMe,
   updateMyProfile,
+  type MfaEnrollment,
   type UpdateProfileInput,
+  type UserProfile,
 } from '@/services/auth.service';
 import { useAuthStore } from '@/store/auth.store';
 import type { GoogleCodeResponse } from '@/types/google-identity';
@@ -60,6 +67,12 @@ export function ProfilePage() {
   const [emailVerificationPending, setEmailVerificationPending] = useState(false);
   const [googleScriptReady, setGoogleScriptReady] = useState(false);
   const [googleScriptFailed, setGoogleScriptFailed] = useState(false);
+  const [mfaCurrentPassword, setMfaCurrentPassword] = useState('');
+  const [mfaCode, setMfaCode] = useState('');
+  const [mfaEnrollment, setMfaEnrollment] = useState<MfaEnrollment | null>(null);
+  const [recoveryCodes, setRecoveryCodes] = useState<string[] | null>(null);
+  const [mfaError, setMfaError] = useState<string | null>(null);
+  const [recoveryCodesSaved, setRecoveryCodesSaved] = useState(false);
 
   const profileQuery = useQuery({
     queryKey: ['auth', 'me'],
@@ -116,6 +129,98 @@ export function ProfilePage() {
     },
     onSettled: () => setEmailVerificationPending(false),
   });
+
+  const beginMfaMutation = useMutation({
+    mutationFn: beginMfaEnrollment,
+    onSuccess: (enrollment) => {
+      setMfaEnrollment(enrollment);
+      setMfaCurrentPassword('');
+      setMfaCode('');
+      setMfaError(null);
+      toast('Authenticator setup started', 'Scan the QR code and verify a six-digit code.');
+    },
+    onError: (error) => {
+      const message = getErrorMessage(error, 'Could not start MFA setup.');
+      setMfaError(message);
+      toast('Could not start MFA setup', message, 'error');
+    },
+  });
+
+  const confirmMfaMutation = useMutation({
+    mutationFn: confirmMfaEnrollment,
+    onSuccess: (result) => {
+      useAuthStore.getState().setAuth(result.token, result.user);
+      queryClient.setQueryData<{ user: UserProfile }>(
+        ['auth', 'me'],
+        (current) => current
+          ? { user: { ...current.user, ...result.user } }
+          : current
+      );
+      setRecoveryCodes(result.recoveryCodes);
+      setRecoveryCodesSaved(false);
+      setMfaEnrollment(null);
+      setMfaCurrentPassword('');
+      setMfaCode('');
+      setMfaError(null);
+    },
+    onError: (error) => {
+      const message = getErrorMessage(error, 'Could not enable MFA.');
+      setMfaError(message);
+      toast('Could not enable MFA', message, 'error');
+    },
+  });
+
+  const disableMfaMutation = useMutation({
+    mutationFn: ({ currentPassword, code }: { currentPassword: string; code: string }) =>
+      disableMfa(currentPassword, code),
+    onSuccess: (result) => {
+      useAuthStore.getState().setAuth(result.token, result.user);
+      queryClient.setQueryData<{ user: UserProfile }>(
+        ['auth', 'me'],
+        (current) => current
+          ? { user: { ...current.user, ...result.user } }
+          : current
+      );
+      setMfaCurrentPassword('');
+      setMfaCode('');
+      setMfaError(null);
+      toast('MFA disabled', 'Other active sessions have been signed out.');
+    },
+    onError: (error) => {
+      const message = getErrorMessage(error, 'Could not disable MFA.');
+      setMfaError(message);
+      toast('Could not disable MFA', message, 'error');
+    },
+  });
+
+  const handleBeginMfa = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setMfaError(null);
+    beginMfaMutation.mutate(mfaCurrentPassword);
+  };
+
+  const handleConfirmMfa = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setMfaError(null);
+    confirmMfaMutation.mutate(mfaCode);
+  };
+
+  const handleDisableMfa = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setMfaError(null);
+    disableMfaMutation.mutate({ currentPassword: mfaCurrentPassword, code: mfaCode });
+  };
+
+  const handleCopyRecoveryCodes = async () => {
+    if (!recoveryCodes) return;
+    try {
+      await navigator.clipboard.writeText(recoveryCodes.join('\n'));
+      setRecoveryCodesSaved(true);
+      toast('Recovery codes copied', 'Store them somewhere only you can access.');
+    } catch {
+      setMfaError('Clipboard access was denied. Select and copy the codes below instead.');
+    }
+  };
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -249,16 +354,17 @@ export function ProfilePage() {
           </CardContent>
         </Card>
       ) : profileQuery.data ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Personal details</CardTitle>
-            <CardDescription>
-              Your role is managed by an administrator. Update your name and verify a new login
-              email with Google.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="max-w-2xl space-y-5">
+        <>
+          <Card>
+            <CardHeader>
+              <CardTitle>Personal details</CardTitle>
+              <CardDescription>
+                Your role is managed by an administrator. Update your name and verify a new login
+                email with Google.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="max-w-2xl space-y-5">
               <form className="space-y-5" onSubmit={handleSubmit}>
                 <div className="space-y-1.5">
                   <Label htmlFor="profile-name">Full name</Label>
@@ -418,9 +524,212 @@ export function ProfilePage() {
                   </p>
                 )}
               </div>
-            </div>
-          </CardContent>
-        </Card>
+              </div>
+            </CardContent>
+          </Card>
+
+          {profileQuery.data.user.role === 'ADMIN' && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Multi-factor authentication</CardTitle>
+                <CardDescription>
+                  Use Google Authenticator for a six-digit sign-in code. This applies to both
+                  password and Google sign-in.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="max-w-2xl space-y-5">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <Badge variant={profileQuery.data.user.mfaEnabled ? 'accent' : 'default'}>
+                      {profileQuery.data.user.mfaEnabled ? 'Enabled' : 'Not enabled'}
+                    </Badge>
+                    <p className="text-sm text-[var(--color-muted-foreground)]">
+                      {profileQuery.data.user.mfaEnabled
+                        ? 'Your account asks for a second factor after your primary sign-in.'
+                        : 'Only administrators can configure this setting.'}
+                    </p>
+                  </div>
+
+                  {recoveryCodes ? (
+                    <div className="space-y-4 rounded-lg border border-[var(--color-border)] bg-[var(--color-muted)] p-4">
+                      <div>
+                        <h3 className="text-sm font-semibold">Save your recovery codes</h3>
+                        <p className="mt-1 text-sm leading-relaxed text-[var(--color-muted-foreground)]">
+                          Each code works once if you cannot use your authenticator. These codes
+                          will not be shown again.
+                        </p>
+                      </div>
+                      <pre className="select-all whitespace-pre-wrap rounded-md border border-[var(--color-border)] bg-[var(--color-card)] p-3 font-mono text-sm leading-7">
+                        {recoveryCodes.join('\n')}
+                      </pre>
+                      <div className="flex flex-wrap gap-2">
+                        <Button type="button" variant="outline" onClick={handleCopyRecoveryCodes}>
+                          Copy codes
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => {
+                            downloadBlob(
+                              new Blob([recoveryCodes.join('\n')], { type: 'text/plain' }),
+                              'devi-times-recovery-codes.txt'
+                            );
+                            setRecoveryCodesSaved(true);
+                          }}
+                        >
+                          Download codes
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="accent"
+                          disabled={!recoveryCodesSaved}
+                          onClick={() => setRecoveryCodes(null)}
+                        >
+                          I’ve saved these codes
+                        </Button>
+                      </div>
+                      {mfaError && <p className="text-sm text-red-600" role="alert">{mfaError}</p>}
+                    </div>
+                  ) : profileQuery.data.user.mfaEnabled ? (
+                    <form className="max-w-md space-y-4" onSubmit={handleDisableMfa}>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="mfa-disable-password">Current password</Label>
+                        <PasswordInput
+                          id="mfa-disable-password"
+                          autoComplete="current-password"
+                          maxLength={128}
+                          value={mfaCurrentPassword}
+                          onChange={(event) => setMfaCurrentPassword(event.target.value)}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="mfa-disable-code">Current authenticator code</Label>
+                        <Input
+                          id="mfa-disable-code"
+                          type="text"
+                          inputMode="numeric"
+                          autoComplete="one-time-code"
+                          maxLength={6}
+                          pattern="[0-9]{6}"
+                          value={mfaCode}
+                          onChange={(event) => setMfaCode(event.target.value)}
+                          required
+                        />
+                      </div>
+                      {mfaError && <p className="text-sm text-red-600" role="alert">{mfaError}</p>}
+                      <Button
+                        type="submit"
+                        variant="outline"
+                        disabled={disableMfaMutation.isPending || mfaCode.length !== 6}
+                      >
+                        {disableMfaMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                        {disableMfaMutation.isPending ? 'Disabling…' : 'Disable MFA'}
+                      </Button>
+                      <p className="text-xs leading-relaxed text-[var(--color-muted-foreground)]">
+                        You’ll need your current password and a fresh code. Other active sessions
+                        will be signed out.
+                      </p>
+                    </form>
+                  ) : mfaEnrollment ? (
+                    <div className="grid gap-5 sm:grid-cols-[auto_1fr] sm:items-start">
+                      <div className="flex w-fit items-center justify-center rounded-lg border border-[var(--color-border)] bg-white p-3">
+                        <QRCodeSVG value={mfaEnrollment.otpauthUrl} size={176} level="M" />
+                      </div>
+                      <div className="space-y-4">
+                        <div>
+                          <h3 className="text-sm font-semibold">Scan with Google Authenticator</h3>
+                          <p className="mt-1 text-sm leading-relaxed text-[var(--color-muted-foreground)]">
+                            Then enter the current six-digit code to finish setup. This setup
+                            expires at {new Date(mfaEnrollment.expiresAt).toLocaleTimeString()}.
+                          </p>
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="mfa-manual-key">Setup key</Label>
+                          <p
+                            id="mfa-manual-key"
+                            className="select-all break-all rounded-md border border-[var(--color-border)] bg-[var(--color-muted)] p-3 font-mono text-sm"
+                          >
+                            {mfaEnrollment.secret}
+                          </p>
+                        </div>
+                        <form className="space-y-3" onSubmit={handleConfirmMfa}>
+                          <div className="space-y-1.5">
+                            <Label htmlFor="mfa-setup-code">Authenticator code</Label>
+                            <Input
+                              id="mfa-setup-code"
+                              type="text"
+                              inputMode="numeric"
+                              autoComplete="one-time-code"
+                              maxLength={6}
+                              pattern="[0-9]{6}"
+                              value={mfaCode}
+                              onChange={(event) => setMfaCode(event.target.value)}
+                              required
+                            />
+                          </div>
+                          {mfaError && <p className="text-sm text-red-600" role="alert">{mfaError}</p>}
+                          <div className="flex flex-wrap gap-2">
+                            <Button
+                              type="submit"
+                              variant="accent"
+                              disabled={confirmMfaMutation.isPending || mfaCode.length !== 6}
+                            >
+                              {confirmMfaMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                              {confirmMfaMutation.isPending ? 'Verifying…' : 'Verify and enable'}
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              disabled={confirmMfaMutation.isPending}
+                              onClick={() => {
+                                setMfaEnrollment(null);
+                                setMfaCode('');
+                                setMfaError(null);
+                              }}
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        </form>
+                      </div>
+                    </div>
+                  ) : !profileQuery.data.user.hasPassword ? (
+                    <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-muted)] p-4">
+                      <p className="text-sm leading-relaxed">
+                        Set a password in the section above before enabling MFA. A password is
+                        required to disable it later.
+                      </p>
+                    </div>
+                  ) : (
+                    <form className="max-w-md space-y-4" onSubmit={handleBeginMfa}>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="mfa-enable-password">Confirm your current password</Label>
+                        <PasswordInput
+                          id="mfa-enable-password"
+                          autoComplete="current-password"
+                          maxLength={128}
+                          value={mfaCurrentPassword}
+                          onChange={(event) => setMfaCurrentPassword(event.target.value)}
+                          required
+                        />
+                      </div>
+                      {mfaError && <p className="text-sm text-red-600" role="alert">{mfaError}</p>}
+                      <Button
+                        type="submit"
+                        variant="accent"
+                        disabled={beginMfaMutation.isPending}
+                      >
+                        {beginMfaMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                        {beginMfaMutation.isPending ? 'Starting setup…' : 'Enable MFA'}
+                      </Button>
+                    </form>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </>
       ) : null}
     </div>
   );

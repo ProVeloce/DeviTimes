@@ -29,6 +29,20 @@
       "when": 1794907753324,
       "tag": "0003_redundant_groot",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794919651183,
+      "tag": "0004_faulty_silver_fox",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1794920327378,
+      "tag": "0005_dark_captain_flint",
+      "breakpoints": true
     }
   ]
 }

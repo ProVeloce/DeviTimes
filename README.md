@@ -41,7 +41,7 @@ The Node.js API connects directly to Supabase PostgreSQL using `DATABASE_URL`. K
 
 Connect the repository root as one Vercel project. The root `vercel.json` deploys three services: `backend` (Hono), `frontend` (Vite), and `alerts` (Hono). Public requests under `/api/*` go to the backend; `/alerts/*` goes to the alerts service; all other paths go to the frontend. The browser calls the backend through the same-origin `/api` path, so no service bindings are needed. The alerts service connects directly to Supabase and Green API; it does not call the backend.
 
-Set the application's environment variables in the Vercel project before deploying. The backend needs `DATABASE_URL` and `JWT_SECRET`; also configure `SETUP_KEY` and any Google Drive/login variables used by the app. The alerts service needs `DATABASE_URL`, `ALERTS_AUTH_TOKEN` (at least 32 characters), `CRON_SECRET` (at least 16 characters), `GREEN_API_ID_INSTANCE`, `GREEN_API_TOKEN_INSTANCE`, and `RECIPIENT_PHONE_NUMBER`. Keep secrets in Vercel's environment settings, not in this repository. `frontend/.env.production` uses `/api` so production requests follow the same-origin rewrite.
+Set the application's environment variables in the Vercel project before deploying. The backend needs `DATABASE_URL` and `JWT_SECRET`; also configure `SETUP_KEY` and any Google Drive/login variables used by the app. Admin MFA additionally requires a stable, private `MFA_ENCRYPTION_KEY` (base64-encoded 32-byte key). The alerts service needs `DATABASE_URL`, `ALERTS_AUTH_TOKEN` (at least 32 characters), `CRON_SECRET` (at least 16 characters), `GREEN_API_ID_INSTANCE`, `GREEN_API_TOKEN_INSTANCE`, and `RECIPIENT_PHONE_NUMBER`. Keep secrets in Vercel's environment settings, not in this repository. `frontend/.env.production` uses `/api` so production requests follow the same-origin rewrite.
 
 Vercel Cron calls `GET /alerts/cron` daily at 09:00 UTC and authenticates with `Authorization: Bearer <CRON_SECRET>`. The protected manual trigger is `POST /alerts/run` with `ALERTS_AUTH_TOKEN`. The alert service's in-process timer remains for non-Vercel `npm start`; the Vercel entrypoint does not start a timer.
 
@@ -100,6 +100,12 @@ The Drive scope is limited to files created by Devi Times. Each dump contains th
 
 The `.dump` file can be restored with PostgreSQL's `pg_restore` utility. It includes the public schema objects and data, but not Supabase-managed schemas or cluster-wide PostgreSQL roles.
 
+### Admin multi-factor authentication
+
+Before deploying MFA support, apply the new backend database migration with `npm run db:migrate -w backend`. The backend must have the same stable `MFA_ENCRYPTION_KEY` in every environment where it runs. Generate one with `node -e "console.log(require('node:crypto').randomBytes(32).toString('base64'))"` and store it as a private environment variable. Do not rotate or lose this key while MFA is enabled; encrypted authenticator secrets will no longer be readable.
+
+Admins can enable MFA from **Profile** after setting a password (Google-only admins can set one there first). Scan the on-screen QR code with Google Authenticator, verify a six-digit code, and save the one-time recovery codes somewhere secure. Both password and Google sign-in then require an authenticator or unused recovery code. Disabling MFA requires the current password and a fresh authenticator code and invalidates other active sessions.
+
 ### Public legal pages for Google OAuth
 
 The static public policy pages are served at `/privacy.html` and `/terms.html` from the production frontend origin. They do not require a signed-in session or a hash route. Enter the full production URLs in Google Auth Platform for the app's Privacy Policy and Terms of Service links, and verify both pages load while signed out. A public support email and the operator's legal entity/jurisdiction have not been supplied; Google production review or legal publication may require those details.
@@ -149,7 +155,7 @@ npm run dev -w electron
 | **Inventory** | Stock history, adjustments (admin) |
 | **Invoices** | List, thermal print, PDF download, cancel (admin only) |
 | **Reports** | Sales, GST, inventory; CSV export (admin) |
-| **Profile** | Update your name and password; change your login email after Google verifies the same address |
+| **Profile** | Update your name and password; change your login email after Google verifies the same address; configure admin MFA |
 | **Manage Users** | Create, update, deactivate, and delete shop accounts (admin) |
 | **Settings** | Shop details, GST, Google Drive backup (admin) |
 
@@ -216,6 +222,10 @@ Base URL (local): `http://127.0.0.1:8787/api`. Set `VITE_API_URL` in the product
 | `POST /auth/login` | JWT login |
 | `GET /auth/google/config` | Check whether allowlisted Google sign-in is configured |
 | `POST /auth/google` | Sign in with a verified, authorized administrator Google account |
+| `POST /auth/mfa/verify` | Complete an administrator sign-in challenge with an authenticator or recovery code |
+| `POST /auth/mfa/enrollment` | Start admin authenticator enrollment (admin) |
+| `POST /auth/mfa/enable` | Confirm enrollment and receive one-time recovery codes (admin) |
+| `POST /auth/mfa/disable` | Disable MFA with the current password and authenticator code (admin) |
 | `GET /auth/google/email-verification/config` | Check whether Google login-email verification is configured |
 | `GET /auth/me` | Get the signed-in user's profile |
 | `PUT /auth/me` | Update the signed-in user's name and password |
@@ -232,7 +242,7 @@ Base URL (local): `http://127.0.0.1:8787/api`. Set `VITE_API_URL` in the product
 | `GET /reports/sales` | Sales report |
 | `PUT /settings` | Update shop settings |
 
-All routes except `/auth/login` and `/health` require `Authorization: Bearer <token>`.
+MFA verification is public but requires a short-lived, one-time challenge issued after primary sign-in. Enrollment and disable routes require an admin access token.
 
 ## Thermal Printing
 
@@ -243,7 +253,7 @@ Configure shop details under **Settings** for receipt header (GSTIN, address, fo
 
 ## Database Schema
 
-Core tables: `users`, `products`, `product_variants`, `categories`, `invoices`, `invoice_items`, `customers`, `payments`, `suppliers`, `stock_history`, `settings`, `backups`.
+Core tables: `users`, `mfa_login_challenges`, `products`, `product_variants`, `categories`, `invoices`, `invoice_items`, `customers`, `payments`, `suppliers`, `stock_history`, `settings`, `backups`.
 
 View schema: `backend/src/db/schema/index.ts`
 

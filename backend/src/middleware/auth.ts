@@ -33,6 +33,7 @@ export const authMiddleware = createMiddleware<AppEnv>(async (c, next) => {
       role: users.role,
       name: users.name,
       isActive: users.isActive,
+      authVersion: users.authVersion,
     })
     .from(users)
     .where(eq(users.id, payload.userId))
@@ -42,6 +43,9 @@ export const authMiddleware = createMiddleware<AppEnv>(async (c, next) => {
   }
   if (payload.role !== user.role) {
     return fail(c, 'Your account role changed. Please sign in again.', 401);
+  }
+  if (payload.authVersion !== user.authVersion) {
+    return fail(c, 'Your security settings changed. Please sign in again.', 401);
   }
 
   c.set('userId', user.id);

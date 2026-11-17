@@ -6,6 +6,7 @@ export interface User {
   name: string;
   role: Role;
   hasPassword?: boolean;
+  mfaEnabled?: boolean;
 }
 
 export interface Category {

@@ -1,10 +1,25 @@
-import { and, desc, eq, ne, sql } from 'drizzle-orm';
+import { and, desc, eq, lt, ne, sql } from 'drizzle-orm';
 import type { Database } from '../db/index.js';
-import { invoices, stockHistory, users } from '../db/schema/index.js';
-import { signToken } from '../auth/jwt.js';
+import { invoices, mfaLoginChallenges, stockHistory, users } from '../db/schema/index.js';
+import { signMfaChallengeToken, signToken, verifyMfaChallengeToken } from '../auth/jwt.js';
 import { hashPassword, needsPasswordRehash, verifyPassword } from '../utils/password.js';
 import { newId } from '../utils/id.js';
 import { AppError } from '../utils/response.js';
+import {
+  consumeRecoveryCode,
+  createRecoveryCodes,
+  createTotpEnrollment,
+  decryptMfaSecret,
+  encryptMfaSecret,
+  hashRecoveryCode,
+  MFA_LOCKOUT_MS,
+  MAX_MFA_FAILURES,
+  nextMfaFailure,
+  verifyTotp,
+} from '../security/mfa.js';
+
+const MFA_CHALLENGE_TTL_MS = 5 * 60 * 1000;
+const MFA_ENROLLMENT_TTL_MS = 10 * 60 * 1000;
 
 export async function login(
   db: Database,
@@ -34,7 +49,7 @@ export async function login(
       .where(eq(users.id, user.id));
   }
 
-  return createLoginResult(user, jwtSecret, expiresIn);
+  return startMfaLoginIfEnabled(db, user, jwtSecret, expiresIn);
 }
 
 function isValidEmail(email: string): boolean {
@@ -163,7 +178,388 @@ export async function loginWithGoogle(
     throw new AppError('This Google account is not authorized to sign in.', 403);
   }
 
-  return createLoginResult(user, jwtSecret, expiresIn);
+  return startMfaLoginIfEnabled(db, user, jwtSecret, expiresIn);
+}
+
+async function startMfaLoginIfEnabled(
+  db: Database,
+  user: typeof users.$inferSelect,
+  jwtSecret: string,
+  expiresIn: string
+) {
+  if (user.role !== 'ADMIN' || !user.mfaEnabled) {
+    return createLoginResult(user, jwtSecret, expiresIn);
+  }
+  return db.transaction(async (tx) => {
+    const now = new Date();
+    const [currentUser] = await tx
+      .select()
+      .from(users)
+      .where(eq(users.id, user.id))
+      .for('update')
+      .limit(1);
+    if (!currentUser || !currentUser.isActive) {
+      throw new AppError('Account is inactive or no longer exists.', 401);
+    }
+    if (currentUser.role !== 'ADMIN' || !currentUser.mfaEnabled) {
+      return createLoginResult(currentUser, jwtSecret, expiresIn);
+    }
+    if (!currentUser.mfaSecretEncrypted) {
+      throw new AppError('Admin MFA is enabled but not configured correctly. Contact support.', 503);
+    }
+    if (currentUser.mfaLockedUntil && currentUser.mfaLockedUntil > now) {
+      throw new AppError('Too many verification attempts. Try again in 15 minutes.', 429);
+    }
+
+    if (getActiveMfaFailures(currentUser, now) === 0 && currentUser.mfaFailedAttempts > 0) {
+      await tx
+        .update(users)
+        .set({ mfaFailedAttempts: 0, mfaFailedAt: null, mfaLockedUntil: null })
+        .where(eq(users.id, currentUser.id));
+    }
+
+    await tx.delete(mfaLoginChallenges).where(lt(mfaLoginChallenges.expiresAt, now));
+    const challengeId = newId();
+    await tx.insert(mfaLoginChallenges).values({
+      id: challengeId,
+      userId: currentUser.id,
+      expiresAt: new Date(now.getTime() + MFA_CHALLENGE_TTL_MS),
+    });
+    return {
+      mfaRequired: true as const,
+      challengeToken: await signMfaChallengeToken(currentUser.id, challengeId, jwtSecret),
+    };
+  });
+}
+
+function getActiveMfaFailures(user: typeof users.$inferSelect, now: Date): number {
+  if (user.mfaLockedUntil && user.mfaLockedUntil <= now) return 0;
+  if (user.mfaFailedAt && now.getTime() - user.mfaFailedAt.getTime() > MFA_LOCKOUT_MS) return 0;
+  return user.mfaFailedAttempts;
+}
+
+function parseRecoveryHashes(value: string): string[] {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(value);
+  } catch {
+    throw new AppError('Recovery codes are unavailable. Contact an administrator.', 503);
+  }
+  if (!Array.isArray(parsed) || !parsed.every((hash) => typeof hash === 'string')) {
+    throw new AppError('Recovery codes are unavailable. Contact an administrator.', 503);
+  }
+  return parsed;
+}
+
+export async function completeMfaLogin(
+  db: Database,
+  challengeToken: string,
+  code: string,
+  jwtSecret: string,
+  expiresIn: string,
+  encryptionKey?: string
+) {
+  let challengeIdentity: { userId: string; challengeId: string };
+  try {
+    challengeIdentity = await verifyMfaChallengeToken(challengeToken, jwtSecret);
+  } catch {
+    throw new AppError('MFA challenge is invalid or expired. Sign in again.', 401);
+  }
+
+  const result = await db.transaction(async (tx) => {
+    const now = new Date();
+    const [challenge] = await tx
+      .select()
+      .from(mfaLoginChallenges)
+      .where(eq(mfaLoginChallenges.id, challengeIdentity.challengeId))
+      .for('update')
+      .limit(1);
+    if (
+      !challenge ||
+      challenge.userId !== challengeIdentity.userId ||
+      challenge.consumedAt ||
+      challenge.expiresAt <= now
+    ) {
+      return { error: 'MFA challenge is invalid, expired, or already used.' };
+    }
+
+    const [user] = await tx
+      .select()
+      .from(users)
+      .where(eq(users.id, challengeIdentity.userId))
+      .for('update')
+      .limit(1);
+    if (!user || !user.isActive || user.role !== 'ADMIN' || !user.mfaEnabled) {
+      await tx
+        .update(mfaLoginChallenges)
+        .set({ consumedAt: now })
+        .where(eq(mfaLoginChallenges.id, challenge.id));
+      return { error: 'MFA sign-in is no longer available. Sign in again.' };
+    }
+    if (user.mfaLockedUntil && user.mfaLockedUntil > now) {
+      await tx
+        .update(mfaLoginChallenges)
+        .set({ consumedAt: now })
+        .where(eq(mfaLoginChallenges.id, challenge.id));
+      return {
+        error: 'Too many verification attempts. Try again in 15 minutes.',
+        status: 429 as const,
+      };
+    }
+    if (!user.mfaSecretEncrypted) {
+      throw new AppError('Admin MFA is enabled but not configured correctly. Contact support.', 503);
+    }
+
+    const secret = decryptMfaSecret(user.mfaSecretEncrypted, encryptionKey);
+    const step = verifyTotp(secret, code, now.getTime(), user.mfaLastUsedStep);
+    const remainingRecoveryHashes =
+      step === null
+        ? consumeRecoveryCode(parseRecoveryHashes(user.mfaRecoveryCodeHashes), code)
+        : null;
+
+    if (step === null && remainingRecoveryHashes === null) {
+      const { attempts: failedAttempts, lockedUntil } = nextMfaFailure(
+        getActiveMfaFailures(user, now),
+        now
+      );
+      const attempts = challenge.attempts + 1;
+      await tx
+        .update(users)
+        .set({
+          mfaFailedAttempts: failedAttempts,
+          mfaFailedAt: now,
+          mfaLockedUntil: lockedUntil,
+        })
+        .where(eq(users.id, user.id));
+      await tx
+        .update(mfaLoginChallenges)
+        .set({
+          attempts,
+          ...(attempts >= MAX_MFA_FAILURES ? { consumedAt: now } : {}),
+        })
+        .where(eq(mfaLoginChallenges.id, challenge.id));
+      return {
+        error: lockedUntil
+          ? 'Too many verification attempts. Try again in 15 minutes.'
+          : attempts >= MAX_MFA_FAILURES
+            ? 'Too many verification attempts. Sign in again.'
+            : 'The authenticator or recovery code is incorrect.',
+        ...(lockedUntil ? { status: 429 as const } : {}),
+      };
+    }
+
+    await tx
+      .update(mfaLoginChallenges)
+      .set({ consumedAt: now })
+      .where(eq(mfaLoginChallenges.id, challenge.id));
+    const updatedUser = await tx
+      .update(users)
+      .set({
+        ...(step !== null ? { mfaLastUsedStep: step } : {}),
+        ...(remainingRecoveryHashes !== null
+          ? { mfaRecoveryCodeHashes: JSON.stringify(remainingRecoveryHashes) }
+          : {}),
+        mfaFailedAttempts: 0,
+        mfaFailedAt: null,
+        mfaLockedUntil: null,
+        updatedAt: now,
+      })
+      .where(eq(users.id, user.id))
+      .returning();
+    if (!updatedUser[0]) {
+      return { error: 'Your account is unavailable. Sign in again.' };
+    }
+    return { user: updatedUser[0] };
+  });
+
+  if ('error' in result && typeof result.error === 'string') {
+    throw new AppError(result.error, 'status' in result ? result.status : 401);
+  }
+  if (!('user' in result) || !result.user) {
+    throw new AppError('MFA verification could not be completed.', 500);
+  }
+  return createLoginResult(result.user, jwtSecret, expiresIn);
+}
+
+export async function beginMfaEnrollment(
+  db: Database,
+  userId: string,
+  currentPassword: string,
+  encryptionKey?: string
+) {
+  return db.transaction(async (tx) => {
+    const [user] = await tx.select().from(users).where(eq(users.id, userId)).for('update').limit(1);
+    if (!user || !user.isActive || user.role !== 'ADMIN') {
+      throw new AppError('Admin account is unavailable.', 403);
+    }
+    if (!user.password) {
+      throw new AppError('Set a password in your profile before enabling MFA.', 409);
+    }
+    if (!(await verifyPassword(currentPassword, user.password))) {
+      throw new AppError('Current password is incorrect.', 400);
+    }
+    if (user.mfaEnabled) throw new AppError('MFA is already enabled.', 409);
+
+    const enrollment = createTotpEnrollment(user.email);
+    const expiresAt = new Date(Date.now() + MFA_ENROLLMENT_TTL_MS);
+    await tx
+      .update(users)
+      .set({
+        mfaPendingSecretEncrypted: encryptMfaSecret(enrollment.secret, encryptionKey),
+        mfaPendingExpiresAt: expiresAt,
+        mfaPendingAttempts: 0,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, user.id));
+
+    return { otpauthUrl: enrollment.otpauthUrl, secret: enrollment.secret, expiresAt };
+  });
+}
+
+export async function confirmMfaEnrollment(
+  db: Database,
+  userId: string,
+  code: string,
+  jwtSecret: string,
+  expiresIn: string,
+  encryptionKey?: string
+) {
+  const result = await db.transaction(async (tx) => {
+    const [user] = await tx.select().from(users).where(eq(users.id, userId)).for('update').limit(1);
+    if (!user || !user.isActive || user.role !== 'ADMIN') {
+      throw new AppError('Admin account is unavailable.', 403);
+    }
+    if (user.mfaEnabled) throw new AppError('MFA is already enabled.', 409);
+    if (
+      !user.mfaPendingSecretEncrypted ||
+      !user.mfaPendingExpiresAt ||
+      user.mfaPendingExpiresAt <= new Date()
+    ) {
+      throw new AppError('MFA setup expired. Start setup again.', 400);
+    }
+
+    const secret = decryptMfaSecret(user.mfaPendingSecretEncrypted, encryptionKey);
+    const now = new Date();
+    const step = verifyTotp(secret, code, now.getTime());
+    if (step === null) {
+      const attempts = user.mfaPendingAttempts + 1;
+      await tx
+        .update(users)
+        .set({
+          mfaPendingAttempts: attempts,
+          ...(attempts >= MAX_MFA_FAILURES
+            ? { mfaPendingSecretEncrypted: null, mfaPendingExpiresAt: null, mfaPendingAttempts: 0 }
+            : {}),
+          updatedAt: now,
+        })
+        .where(eq(users.id, user.id));
+      return {
+        error: attempts >= MAX_MFA_FAILURES
+          ? 'Too many attempts. Start MFA setup again.'
+          : 'The authenticator code is incorrect.',
+      };
+    }
+
+    const recoveryCodes = createRecoveryCodes();
+    const [updatedUser] = await tx
+      .update(users)
+      .set({
+        mfaEnabled: true,
+        mfaSecretEncrypted: user.mfaPendingSecretEncrypted,
+        mfaPendingSecretEncrypted: null,
+        mfaPendingExpiresAt: null,
+        mfaPendingAttempts: 0,
+        mfaRecoveryCodeHashes: JSON.stringify(recoveryCodes.map(hashRecoveryCode)),
+        mfaLastUsedStep: step,
+        authVersion: sql`${users.authVersion} + 1`,
+        updatedAt: now,
+      })
+      .where(eq(users.id, user.id))
+      .returning();
+    if (!updatedUser) return { error: 'Your account is unavailable. Sign in again.' };
+    return { recoveryCodes, user: updatedUser };
+  });
+
+  if ('error' in result && typeof result.error === 'string') {
+    throw new AppError(result.error, 400);
+  }
+  if (!('recoveryCodes' in result) || !('user' in result)) {
+    throw new AppError('MFA setup could not be completed.', 500);
+  }
+  const loginResult = await createLoginResult(result.user, jwtSecret, expiresIn);
+  return { ...loginResult, recoveryCodes: result.recoveryCodes };
+}
+
+export async function disableMfa(
+  db: Database,
+  userId: string,
+  currentPassword: string,
+  code: string,
+  jwtSecret: string,
+  expiresIn: string,
+  encryptionKey?: string
+) {
+  const result = await db.transaction(async (tx) => {
+    const [user] = await tx.select().from(users).where(eq(users.id, userId)).for('update').limit(1);
+    if (!user || !user.isActive || user.role !== 'ADMIN') {
+      throw new AppError('Admin account is unavailable.', 403);
+    }
+    if (!user.password || !(await verifyPassword(currentPassword, user.password))) {
+      throw new AppError('Current password is incorrect.', 400);
+    }
+    if (!user.mfaEnabled || !user.mfaSecretEncrypted) {
+      throw new AppError('MFA is not enabled.', 409);
+    }
+
+    const secret = decryptMfaSecret(user.mfaSecretEncrypted, encryptionKey);
+    const now = new Date();
+    if (user.mfaLockedUntil && user.mfaLockedUntil > now) {
+      return {
+        error: 'Too many verification attempts. Try again in 15 minutes.',
+        status: 429 as const,
+      };
+    }
+    const step = verifyTotp(secret, code, now.getTime(), user.mfaLastUsedStep);
+    if (step === null) {
+      const { attempts, lockedUntil } = nextMfaFailure(getActiveMfaFailures(user, now), now);
+      await tx
+        .update(users)
+        .set({ mfaFailedAttempts: attempts, mfaFailedAt: now, mfaLockedUntil: lockedUntil })
+        .where(eq(users.id, user.id));
+      return {
+        error: lockedUntil
+          ? 'Too many verification attempts. Try again in 15 minutes.'
+          : 'The authenticator code is incorrect or has already been used.',
+        status: lockedUntil ? 429 as const : 400 as const,
+      };
+    }
+
+    const [updated] = await tx
+      .update(users)
+      .set({
+        mfaEnabled: false,
+        mfaSecretEncrypted: null,
+        mfaPendingSecretEncrypted: null,
+        mfaPendingExpiresAt: null,
+        mfaPendingAttempts: 0,
+        mfaRecoveryCodeHashes: '[]',
+        mfaLastUsedStep: -1,
+        mfaFailedAttempts: 0,
+        mfaFailedAt: null,
+        mfaLockedUntil: null,
+        authVersion: sql`${users.authVersion} + 1`,
+        updatedAt: now,
+      })
+      .where(eq(users.id, user.id))
+      .returning();
+    if (!updated) return { error: 'Your account is unavailable.', status: 404 as const };
+    return { user: updated };
+  });
+  if ('error' in result && typeof result.error === 'string') {
+    throw new AppError(result.error, result.status);
+  }
+  if (!('user' in result)) throw new AppError('MFA could not be disabled.', 500);
+  return createLoginResult(result.user, jwtSecret, expiresIn);
 }
 
 async function createLoginResult(
@@ -177,6 +573,7 @@ async function createLoginResult(
       email: user.email,
       role: user.role,
       name: user.name,
+      authVersion: user.authVersion,
     },
     jwtSecret,
     expiresIn
@@ -189,6 +586,7 @@ async function createLoginResult(
       email: user.email,
       name: user.name,
       role: user.role,
+      mfaEnabled: user.mfaEnabled,
     },
   };
 }
@@ -233,6 +631,7 @@ export async function createUser(
         name: users.name,
         role: users.role,
         isActive: users.isActive,
+        mfaEnabled: users.mfaEnabled,
         createdAt: users.createdAt,
         updatedAt: users.updatedAt,
         hasPassword: sql<boolean>`${users.password} IS NOT NULL`,
@@ -309,6 +708,7 @@ export async function updateUser(
         name: users.name,
         role: users.role,
         isActive: users.isActive,
+        mfaEnabled: users.mfaEnabled,
         createdAt: users.createdAt,
         updatedAt: users.updatedAt,
         hasPassword: sql<boolean>`${users.password} IS NOT NULL`,
@@ -385,6 +785,7 @@ export async function getUserProfile(db: Database, userId: string) {
       name: users.name,
       role: users.role,
       hasPassword: sql<boolean>`${users.password} IS NOT NULL`,
+      mfaEnabled: users.mfaEnabled,
     })
     .from(users)
     .where(eq(users.id, userId))
@@ -438,6 +839,7 @@ export async function updateOwnProfile(
         name: users.name,
         role: users.role,
         hasPassword: sql<boolean>`${users.password} IS NOT NULL`,
+        mfaEnabled: users.mfaEnabled,
       })
       .from(users)
       .where(eq(users.id, userId))

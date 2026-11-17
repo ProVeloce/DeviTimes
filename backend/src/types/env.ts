@@ -8,6 +8,7 @@ export type Env = {
   GOOGLE_DRIVE_CLIENT_SECRET?: string;
   GOOGLE_DRIVE_TOKEN_ENCRYPTION_KEY?: string;
   GOOGLE_LOGIN_ALLOWED_EMAIL?: string;
+  MFA_ENCRYPTION_KEY?: string;
   SUPABASE_SSL_ROOT_CERT?: string;
   PG_DUMP_PATH?: string;
 };

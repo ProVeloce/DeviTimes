@@ -3,6 +3,17 @@ import type { User } from '@/types';
 
 export interface UserProfile extends User {
   hasPassword: boolean;
+  mfaEnabled: boolean;
+}
+
+export type LoginResult =
+  | { token: string; user: User }
+  | { mfaRequired: true; challengeToken: string };
+
+export interface MfaEnrollment {
+  secret: string;
+  otpauthUrl: string;
+  expiresAt: string;
 }
 
 export interface UpdateProfileInput {
@@ -12,7 +23,7 @@ export interface UpdateProfileInput {
 }
 
 export async function login(username: string, password: string) {
-  return api<{ token: string; user: User }>('/auth/login', {
+  return api<LoginResult>('/auth/login', {
     method: 'POST',
     body: JSON.stringify({ username, password }),
   });
@@ -29,9 +40,37 @@ export async function getGoogleEmailVerificationConfig() {
 }
 
 export async function loginWithGoogle(code: string) {
-  return api<{ token: string; user: User }>('/auth/google', {
+  return api<LoginResult>('/auth/google', {
     method: 'POST',
     body: JSON.stringify({ code }),
+  });
+}
+
+export async function verifyMfaLogin(challengeToken: string, code: string) {
+  return api<{ token: string; user: User }>('/auth/mfa/verify', {
+    method: 'POST',
+    body: JSON.stringify({ challengeToken, code }),
+  });
+}
+
+export async function beginMfaEnrollment(currentPassword: string) {
+  return api<MfaEnrollment>('/auth/mfa/enrollment', {
+    method: 'POST',
+    body: JSON.stringify({ currentPassword }),
+  });
+}
+
+export async function confirmMfaEnrollment(code: string) {
+  return api<{ token: string; user: User; recoveryCodes: string[] }>('/auth/mfa/enable', {
+    method: 'POST',
+    body: JSON.stringify({ code }),
+  });
+}
+
+export async function disableMfa(currentPassword: string, code: string) {
+  return api<{ token: string; user: User }>('/auth/mfa/disable', {
+    method: 'POST',
+    body: JSON.stringify({ currentPassword, code }),
   });
 }
 
