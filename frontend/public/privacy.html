@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Privacy Policy for the Devi Times billing and point-of-sale application.">
+    <title>Privacy Policy | Devi Times</title>
+    <link rel="stylesheet" href="./legal.css">
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <header class="site-header">
+      <div class="header-inner">
+        <a class="brand" href="./index.html#/login">
+          <img src="./logo.png" alt="">
+          <span>Devi Times</span>
+        </a>
+        <nav class="legal-nav" aria-label="Legal pages">
+          <a href="./privacy.html" aria-current="page">Privacy Policy</a>
+          <a href="./terms.html">Terms of Service</a>
+          <a class="sign-in" href="./index.html#/login">Sign in</a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main" class="legal-shell">
+      <section class="page-intro" aria-labelledby="page-title">
+        <h1 id="page-title">Privacy Policy</h1>
+        <p class="lead">
+          This notice explains how the Devi Times billing and point-of-sale application handles
+          account information and shop records, including offline use and optional Google Drive
+          backups.
+        </p>
+        <p class="last-updated">Last updated: 17 November 2026</p>
+      </section>
+
+      <p class="overview-heading">Overview only — the full policy follows below.</p>
+      <div class="table-scroll">
+        <table class="overview-table">
+          <thead>
+            <tr>
+              <th scope="col">Where</th>
+              <th scope="col">What happens</th>
+              <th scope="col">When</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td data-label="Where">This device</td>
+              <td data-label="What happens">Some app data and pending offline changes are stored locally.</td>
+              <td data-label="When">While using the app, including offline periods</td>
+            </tr>
+            <tr>
+              <td data-label="Where">Configured database</td>
+              <td data-label="What happens">Supported offline changes sync to the shop database.</td>
+              <td data-label="When">When connectivity returns and the signed-in user can sync</td>
+            </tr>
+            <tr>
+              <td data-label="Where">Google Drive</td>
+              <td data-label="What happens">A complete application database backup is saved to a connected account.</td>
+              <td data-label="When">When an administrator requests a backup</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="content-layout">
+        <nav class="contents" aria-label="Privacy Policy sections">
+          <h2>On this page</h2>
+          <ol>
+            <li><a href="#about">About this notice</a></li>
+            <li><a href="#information">Information in the app</a></li>
+            <li><a href="#offline">Offline storage and sync</a></li>
+            <li><a href="#accounts">Accounts and access</a></li>
+            <li><a href="#google">Google services and backups</a></li>
+            <li><a href="#use-sharing">How information is used</a></li>
+            <li><a href="#retention">Retention and deletion</a></li>
+            <li><a href="#security">Security and your choices</a></li>
+            <li><a href="#changes-contact">Changes and contact</a></li>
+          </ol>
+        </nav>
+
+        <article class="legal-copy">
+          <section id="about">
+            <h2>About this notice</h2>
+            <p>
+              Devi Times is an offline-first billing and point-of-sale application for shop
+              operations. This Privacy Policy describes information handled by the app and its
+              configured backend. A shop administrator manages the shop's users, settings, and
+              business records.
+            </p>
+          </section>
+
+          <section id="information">
+            <h2>Information in the app</h2>
+            <p>
+              The app processes information that a shop or its staff enters or generates while
+              using it. Depending on the shop's use, this can include:
+            </p>
+            <ul>
+              <li>Staff account details such as name, login email or username, and role.</li>
+              <li>Products, variants, categories, suppliers, prices, and inventory history.</li>
+              <li>Customer details entered by the shop, such as name, phone, email, address, or tax identifier.</li>
+              <li>Invoices, invoice items, payment method and amount, payment references, and notes.</li>
+              <li>Shop settings and records needed to operate billing, inventory, and reporting features.</li>
+            </ul>
+            <p>
+              The app records payment information entered by the shop. It does not itself authorize
+              or process card or UPI transactions.
+            </p>
+          </section>
+
+          <section id="offline">
+            <h2>Offline storage and synchronization</h2>
+            <p>
+              To support offline workflows, the app stores selected previously loaded data and
+              pending changes in browser storage on the device. Supported changes are queued and
+              sent to the configured database when a connection is available and the same user is
+              signed in. The app shows connection and pending-sync status; a queued change is not
+              yet confirmed as saved in the database.
+            </p>
+            <p>
+              Signing out removes the app's login token but does not automatically erase all cached
+              records or queued changes from the device. Queued changes will not sync until the
+              relevant user signs in again. Clearing browser or app storage can remove unsynced
+              work, so check the sync status before clearing it.
+            </p>
+            <p>
+              Browser storage is tied to the device and browser profile. Secure shared devices,
+              restrict access to the browser profile, and use the device's storage controls when
+              removing local data.
+            </p>
+          </section>
+
+          <section id="accounts">
+            <h2>Accounts and access</h2>
+            <p>
+              The app uses staff accounts and Admin or Cashier roles to control access to shop
+              features. The signed-in profile and session token are stored in the browser so the
+              app can maintain the session. Administrators manage shop accounts and should grant
+              access only to people who need it.
+            </p>
+            <p>
+              If Google sign-in is enabled, Google provides account information needed to verify
+              and sign in to the app. Using Google sign-in does not give the app access to a
+              person's Google Drive unless that person separately connects Drive for backups.
+            </p>
+          </section>
+
+          <section id="google">
+            <h2>Google services and backups</h2>
+            <p>
+              Google Drive backup is optional. When an administrator connects a Google account,
+              the app receives and stores the account email and a refresh token that the server
+              encrypts. The app uses Google's Drive file scope to create and manage backup files
+              created by Devi Times.
+            </p>
+            <p>
+              A Drive backup contains a complete dump of the application's public database schema
+              and its records. It can therefore include the information listed in this policy,
+              login password hashes, connected Drive account emails, and encrypted Drive refresh
+              tokens. It does not include Supabase-managed schemas or the server's token-encryption
+              key.
+            </p>
+            <p>
+              Disconnecting a Google account revokes the saved connection but does not delete
+              backups already created in that account. Review and remove those files directly in
+              Google Drive. Google services are subject to
+              <a href="https://policies.google.com/privacy">Google's Privacy Policy</a>.
+            </p>
+          </section>
+
+          <section id="use-sharing">
+            <h2>How information is used and shared</h2>
+            <p>
+              The app uses account and shop information to authenticate staff, provide billing and
+              inventory features, keep supported offline work in sync, and create backups when an
+              administrator requests them. The configured database is hosted using Supabase
+              PostgreSQL. Google processes information when Google sign-in or Drive backup is used.
+            </p>
+            <p>
+              Shop administrators decide what customer information to enter and are responsible
+              for providing any notices or obtaining any permissions required for their use of
+              that information. The app does not act as a payment processor.
+            </p>
+          </section>
+
+          <section id="retention">
+            <h2>Retention and deletion</h2>
+            <p>
+              The app does not publish a universal retention period for shop records. The shop
+              administrator manages records and staff access in the app and should keep records
+              only as long as needed for the shop's requirements.
+            </p>
+            <p>
+              Cached data and pending changes may remain in browser storage after sign-out.
+              Backups already created in Google Drive remain there until deleted from that
+              account. Disconnecting Drive does not remove existing backup files.
+            </p>
+          </section>
+
+          <section id="security">
+            <h2>Security and your choices</h2>
+            <p>
+              Access is controlled through shop accounts and roles. The server encrypts saved
+              Google Drive refresh tokens. No statement in this policy means that every local
+              browser record or every database backup is encrypted by the app on the device or at
+              rest.
+            </p>
+            <p>
+              Use a secure device, protect your login credentials, and sign out on shared devices.
+              For a request about a staff account or a customer record, contact the shop
+              administrator. An administrator can manage account access and should coordinate
+              requests involving the shop's records.
+            </p>
+          </section>
+
+          <section id="changes-contact" class="contact-note">
+            <h2>Changes and contact</h2>
+            <p>
+              This policy may be updated when the app or its data practices change. The latest
+              version will be published on this page.
+            </p>
+            <p>
+              For questions or privacy requests, contact your Devi Times shop administrator
+              through the usual shop support channel. A general public support email or mailing
+              address is not listed here.
+            </p>
+          </section>
+        </article>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-inner">
+        <span>Devi Times</span>
+        <nav class="footer-links" aria-label="Footer legal pages">
+          <a href="./privacy.html" aria-current="page">Privacy Policy</a>
+          <a href="./terms.html">Terms of Service</a>
+        </nav>
+      </div>
+    </footer>
+  </body>
+</html>

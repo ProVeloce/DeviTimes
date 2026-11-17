@@ -468,6 +468,35 @@ export function buildThermalReceiptHtml(
 </html>`;
 }
 
+export function buildPrinterTestHtml(settings: ShopSettings): string {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Printer test · ${escapeHtml(settings.shopName)}</title>
+  <style>
+    @page { size: 80mm auto; margin: 2mm; }
+    body { box-sizing: border-box; width: 72mm; margin: 0 auto; padding: 4px; color: #111; font: 12px/1.45 'Courier New', monospace; text-align: center; }
+    hr { border: 0; border-top: 1px dashed #111; margin: 8px 0; }
+    .shop-name { font-size: 15px; font-weight: bold; }
+    .test-label { margin: 18px 0 8px; font-size: 17px; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <div class="shop-name">${escapeHtml(settings.shopName)}</div>
+  <div>${escapeHtml(settings.shopTagline ?? '')}</div>
+  <hr/>
+  <div class="test-label">PRINTER TEST</div>
+  <div>NO SALE - NO CHARGE</div>
+  <hr/>
+  <div>If this receipt printed clearly,</div>
+  <div>your printer is ready to use.</div>
+  <div>${escapeHtml(new Date().toLocaleString())}</div>
+</body>
+</html>`;
+}
+
 export function openPrintWindow(): Window | null {
   return window.open('', '_blank', 'width=900,height=800');
 }

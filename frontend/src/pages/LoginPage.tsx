@@ -267,6 +267,18 @@ export function LoginPage() {
                   : 'Google sign-in is not configured for this application yet.'}
             </p>
           )}
+
+          <nav
+            aria-label="Legal information"
+            className="mt-8 flex justify-center gap-5 text-xs text-[var(--color-muted-foreground)]"
+          >
+            <a className="hover:text-[var(--color-foreground)] hover:underline" href="./privacy.html">
+              Privacy Policy
+            </a>
+            <a className="hover:text-[var(--color-foreground)] hover:underline" href="./terms.html">
+              Terms of Service
+            </a>
+          </nav>
         </div>
       </main>
     </div>

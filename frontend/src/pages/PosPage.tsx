@@ -6,6 +6,7 @@ import {
   Search,
   Trash2,
   Printer,
+  Loader2,
   Save,
   RotateCcw,
   Plus,
@@ -31,6 +32,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from '@/components/ui/toast';
 import {
   buildInvoiceHtml,
+  buildPrinterTestHtml,
   buildThermalReceiptHtml,
   openPrintWindow,
   printHtml,
@@ -75,6 +77,7 @@ export function PosPage() {
   const [mixedCash, setMixedCash] = useState('');
   const [mixedUpi, setMixedUpi] = useState('');
   const [saving, setSaving] = useState(false);
+  const [printerSetupPending, setPrinterSetupPending] = useState(false);
 
   const lines = usePosStore((s) => s.lines);
   const billDiscount = usePosStore((s) => s.billDiscount);
@@ -104,6 +107,53 @@ export function PosPage() {
     queryKey: ['settings'],
     queryFn: () => api<ShopSettings>('/settings'),
   });
+
+  const handlePrinterSetup = useCallback(async () => {
+    if (!settings) {
+      toast('Printer setup unavailable', 'Shop settings are not loaded yet.', 'error');
+      return;
+    }
+
+    const receiptHtml = buildPrinterTestHtml(settings);
+    if (window.electronAPI?.printThermal) {
+      setPrinterSetupPending(true);
+      try {
+        await window.electronAPI.printThermal(receiptHtml);
+        toast(
+          'Printer dialog closed',
+          'Printer selection is managed by Windows and is not saved separately in the app.'
+        );
+      } catch (error) {
+        toast(
+          'Could not open printer dialog',
+          error instanceof Error ? error.message : 'Check the printer connection and try again.',
+          'error'
+        );
+      } finally {
+        setPrinterSetupPending(false);
+      }
+      return;
+    }
+
+    const printWindow = openPrintWindow();
+    if (!printWindow) {
+      toast(
+        'Print window blocked',
+        'Allow pop-ups for this site, then try connecting the printer again.',
+        'error'
+      );
+      return;
+    }
+    if (!printHtml(receiptHtml, printWindow)) {
+      printWindow.close();
+      toast('Could not open printer dialog', 'Close other print windows and try again.', 'error');
+      return;
+    }
+    toast(
+      'Printer dialog opened',
+      'Select an installed printer and print the no-sale test receipt.'
+    );
+  }, [settings]);
 
   const handleBarcode = useCallback(async (code: string) => {
     if (!code.trim()) return;
@@ -504,6 +554,25 @@ export function PosPage() {
                 />
               </div>
             )}
+
+            <div className="space-y-1.5">
+              <Button
+                className="w-full"
+                variant="outline"
+                disabled={!settings || printerSetupPending}
+                onClick={() => void handlePrinterSetup()}
+              >
+                {printerSetupPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Printer className="h-4 w-4" />
+                )}
+                {printerSetupPending ? 'Opening printer dialog…' : 'Connect a printer'}
+              </Button>
+              <p className="text-center text-[11px] leading-relaxed text-[var(--color-muted-foreground)]">
+                Choose an installed printer and print a no-sale test receipt.
+              </p>
+            </div>
 
             <div className="mt-auto space-y-1.5">
               <Button

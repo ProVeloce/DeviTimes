@@ -90,6 +90,10 @@ The Drive scope is limited to files created by Devi Times. Each dump contains th
 
 The `.dump` file can be restored with PostgreSQL's `pg_restore` utility. It includes the public schema objects and data, but not Supabase-managed schemas or cluster-wide PostgreSQL roles.
 
+### Public legal pages for Google OAuth
+
+The static public policy pages are served at `/privacy.html` and `/terms.html` from the production frontend origin. They do not require a signed-in session or a hash route. Enter the full production URLs in Google Auth Platform for the app's Privacy Policy and Terms of Service links, and verify both pages load while signed out. A public support email and the operator's legal entity/jurisdiction have not been supplied; Google production review or legal publication may require those details.
+
 ### Offline operation
 
 After signing in while online, the app keeps the product/category/settings data it has loaded on this device. Bills, product/category changes, stock adjustments, and settings changes made offline are saved locally and queued for sync when connectivity returns. The app header shows connection and pending-sync status. Keep the app signed in on the device; signing out prevents that user's queued changes from syncing until they sign in again.
@@ -130,7 +134,7 @@ npm run dev -w electron
 | Module | Description |
 |--------|-------------|
 | **Dashboard** | Today/monthly sales, profit estimate, charts, low stock, top products |
-| **Billing / POS** | Barcode scan, product search, GST lines, payment modes, F-key shortcuts |
+| **Billing / POS** | Barcode scan, product search, GST lines, payment modes, receipt printing, F-key shortcuts |
 | **Products** | CRUD, variants, barcodes (admin) |
 | **Inventory** | Stock history, adjustments (admin) |
 | **Invoices** | List, thermal print, PDF download, cancel (admin only) |
@@ -138,6 +142,8 @@ npm run dev -w electron
 | **Profile** | Update your name and password; change your login email after Google verifies the same address |
 | **Manage Users** | Create, update, deactivate, and delete shop accounts (admin) |
 | **Settings** | Shop details, GST, Google Drive backup (admin) |
+
+Receipt-printer setup in Billing opens the browser or Windows print dialog with a no-sale test receipt. Add the printer to Windows first, then select it in that dialog. The app does not save a separate printer selection; direct USB/Bluetooth pairing requires a supported printer model and is not included yet.
 
 ## Role Permissions
 
