@@ -7,7 +7,7 @@ delete process.env.GOOGLE_DRIVE_CLIENT_ID;
 delete process.env.GOOGLE_DRIVE_CLIENT_SECRET;
 delete process.env.GOOGLE_LOGIN_ALLOWED_EMAIL;
 
-const { default: app } = await import('../src/vercel.js');
+const { default: app } = await import('../src/server.mjs');
 
 test('Google login config does not require the database or JWT secret', async () => {
   const response = await app.request('/api/auth/google/config');
