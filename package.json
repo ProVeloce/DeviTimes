@@ -1,0 +1,30 @@
+{
+  "name": "devi-times-billing",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Professional watch & clock shop billing POS — Devi Times",
+  "workspaces": [
+    "backend",
+    "frontend",
+    "electron"
+  ],
+  "scripts": {
+    "dev": "concurrently -n api,web -c blue,green \"npm run dev -w backend\" \"npm run dev -w frontend\"",
+    "dev:desktop": "concurrently -n api,web,electron -c blue,green,magenta \"npm run dev -w backend\" \"npm run dev -w frontend\" \"npm run dev -w electron\"",
+    "build": "npm run build -w frontend && npm run build -w backend",
+    "icons:electron": "python scripts/build-electron-icon.py",
+    "build:desktop": "npm run build:electron -w frontend && npm run icons:electron && npm run build -w electron",
+    "start:api": "npm run start -w backend",
+    "db:generate": "npm run db:generate -w backend",
+    "db:migrate": "npm run db:migrate -w backend"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "allowScripts": {
+    "argon2@0.45.2": true
+  }
+}

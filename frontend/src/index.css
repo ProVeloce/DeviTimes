@@ -1,0 +1,118 @@
+@import "tailwindcss";
+@import "@fontsource-variable/google-sans";
+@import "@fontsource/google-sans-code/400.css";
+@import "@fontsource/google-sans-code/500.css";
+
+@theme {
+  --font-sans: "Google Sans Variable", "Google Sans", system-ui, -apple-system, sans-serif;
+  --font-mono: "Google Sans Code", ui-monospace, monospace;
+
+  --color-background: #f8f9fa;
+  --color-foreground: #202124;
+  --color-card: #ffffff;
+  --color-card-foreground: #202124;
+  --color-muted: #f1f3f4;
+  --color-muted-foreground: #5f6368;
+  --color-border: #dadce0;
+  --color-input: #dadce0;
+  --color-primary: #202124;
+  --color-primary-foreground: #ffffff;
+  --color-accent: #1a73e8;
+  --color-accent-foreground: #ffffff;
+  --color-brand: #b07d1a;
+  --color-brand-muted: #e8f0fe;
+  --color-destructive: #d93025;
+  --color-success: #188038;
+  --color-warning: #e37400;
+  --color-ring: #1a73e8;
+  --color-sidebar: #ffffff;
+  --color-sidebar-foreground: #3c4043;
+  --color-sidebar-border: #e8eaed;
+  --color-sidebar-active: #e8f0fe;
+  --color-sidebar-active-text: #1967d2;
+
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+
+  --shadow-xs: 0 1px 2px 0 rgb(60 64 67 / 0.06);
+  --shadow-sm: 0 1px 3px 0 rgb(60 64 67 / 0.1), 0 1px 2px -1px rgb(60 64 67 / 0.08);
+  --shadow-md: 0 4px 12px 0 rgb(60 64 67 / 0.12);
+  --shadow-lg: 0 8px 24px 0 rgb(60 64 67 / 0.14);
+}
+
+* {
+  border-color: var(--color-border);
+}
+
+html {
+  font-size: 16px;
+}
+
+body {
+  font-family: var(--font-sans);
+  font-feature-settings: "kern" 1, "liga" 1;
+  background: var(--color-background);
+  color: var(--color-foreground);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  letter-spacing: -0.01em;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--color-accent) 22%, transparent);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #bdc1c6;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #9aa0a6;
+}
+
+@layer components {
+  .page-shell {
+    @apply mx-auto w-full max-w-[1600px];
+  }
+
+  .surface-card {
+    border-radius: var(--radius-xl);
+    border: 1px solid var(--color-border);
+    background: var(--color-card);
+    box-shadow: var(--shadow-xs);
+  }
+
+  .data-table thead {
+    background: var(--color-muted);
+    color: var(--color-muted-foreground);
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .data-table tbody tr {
+    border-top: 1px solid var(--color-border);
+    transition: background-color 0.15s ease;
+  }
+
+  .data-table tbody tr:hover {
+    background: color-mix(in srgb, var(--color-muted) 45%, transparent);
+  }
+}

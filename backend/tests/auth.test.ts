@@ -1,0 +1,108 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import {
+  getGoogleLoginConfiguration,
+  isAllowedGoogleLogin,
+} from '../src/services/auth.service.js';
+import {
+  createUserSchema,
+  updateProfileSchema,
+  updateUserSchema,
+} from '../src/validators/auth.js';
+
+test('Google login requires OAuth credentials and an allowed account email', () => {
+  assert.deepEqual(
+    getGoogleLoginConfiguration({
+      clientId: 'client-id',
+      clientSecret: 'client-secret',
+      allowedEmail: 'shreyanofficial25@gmail.com',
+    }),
+    { configured: true, clientId: 'client-id' }
+  );
+  assert.deepEqual(
+    getGoogleLoginConfiguration({
+      clientId: 'client-id',
+      clientSecret: 'client-secret',
+    }),
+    { configured: false, clientId: null }
+  );
+});
+
+test('Google login accepts only the verified allowlisted email', () => {
+  assert.equal(
+    isAllowedGoogleLogin('ShreyanOfficial25@gmail.com', true, 'shreyanofficial25@gmail.com'),
+    true
+  );
+  assert.equal(
+    isAllowedGoogleLogin('another@example.com', true, 'shreyanofficial25@gmail.com'),
+    false
+  );
+  assert.equal(
+    isAllowedGoogleLogin('shreyanofficial25@gmail.com', false, 'shreyanofficial25@gmail.com'),
+    false
+  );
+});
+
+test('user schemas normalize email and allow leaving an existing password unchanged', () => {
+  const created = createUserSchema.parse({
+    email: '  Staff@Example.com ',
+    password: 'secure-password',
+    name: ' Shop Staff ',
+  });
+  assert.equal(created.email, 'staff@example.com');
+  assert.equal(created.name, 'Shop Staff');
+  assert.equal(created.isActive, undefined);
+
+  const updated = updateUserSchema.parse({
+    email: 'STAFF@example.com',
+    name: 'Shop Staff',
+    role: 'CASHIER',
+    isActive: true,
+  });
+  assert.equal(updated.email, 'staff@example.com');
+  assert.equal(updated.password, undefined);
+  assert.equal(
+    createUserSchema.parse({
+      email: ' 7418956115 ',
+      password: 'secure-password',
+      name: 'Shop Staff',
+    }).email,
+    '7418956115',
+  );
+  assert.equal(
+    createUserSchema.safeParse({
+      email: 'shop staff',
+      password: 'secure-password',
+      name: 'Shop Staff',
+    }).success,
+    false,
+  );
+  assert.equal(
+    updateUserSchema.safeParse({
+      email: 'staff@example.com',
+      password: 'short',
+      name: 'Shop Staff',
+      role: 'CASHIER',
+      isActive: true,
+    }).success,
+    false,
+  );
+});
+
+test('profile schema supports Google-only password setup and rejects incomplete password changes', () => {
+  const googleOnlyProfile = updateProfileSchema.parse({
+    email: 'admin@example.com',
+    name: 'Admin User',
+    newPassword: 'new-secure-password',
+  });
+  assert.equal(googleOnlyProfile.newPassword, 'new-secure-password');
+
+  assert.equal(
+    updateProfileSchema.safeParse({
+      email: 'admin@example.com',
+      name: 'Admin User',
+      currentPassword: 'current-password',
+    }).success,
+    false,
+  );
+});

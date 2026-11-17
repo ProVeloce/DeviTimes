@@ -1,0 +1,1260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice Preview - Devi Times</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* --- Reset & Base Styles --- */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Open Sans', sans-serif;
+            background-color: #e9eaec;
+            color: #333;
+            font-size: 13px;
+            line-height: 1.5;
+            padding: 30px 20px;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .invoice-container {
+            max-width: 950px;
+            margin: 0 auto;
+            background-color: #fff;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            position: relative;
+            overflow: hidden;
+            border-radius: 4px;
+        }
+
+        /* --- Top Header Banner --- */
+        .top-banner {
+            background: linear-gradient(110deg, #101820 0%, #17232c 58%, #101820 100%);
+            color: #fff;
+            padding: 22px 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+            min-height: 150px;
+            z-index: 10;
+            border-bottom: 3px solid #b9915a;
+        }
+
+        /* Right side background image fetched from assets */
+        .top-banner::before {
+            content: '';
+            position: absolute;
+            right: 0;
+            top: 0;
+            width: 52%;
+            height: 100%;
+            background-image: linear-gradient(to right, #101820 0%, rgba(16,24,32,0.82) 24%, rgba(16,24,32,0.25) 100%), url('assets/billing-image-header.avif');
+            background-size: cover;
+            background-position: center right;
+            background-repeat: no-repeat;
+            z-index: 1;
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            z-index: 2;
+            gap: 16px;
+        }
+
+        /* Left side logo fetched from assets */
+        .brand-logo-img {
+            width: 72px;
+            height: 72px;
+            object-fit: contain;
+            filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.35));
+        }
+
+        .logo-text {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .logo-text h1 {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 29px;
+            color: #d7b77d;
+            letter-spacing: 4px;
+            line-height: 1;
+            margin: 0 0 2px;
+            font-weight: 700;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.35);
+        }
+
+        .logo-text h2 {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 29px;
+            color: #fff;
+            letter-spacing: 4px;
+            line-height: 1;
+            font-weight: 600;
+            margin: 0 0 8px;
+        }
+
+        .logo-subtext {
+            font-size: 8px;
+            letter-spacing: 1.3px;
+            color: #e0e3e5;
+            border-top: 1px solid rgba(215,183,125,0.65);
+            padding-top: 6px;
+            display: inline-block;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .slogan {
+            text-align: right;
+            z-index: 2;
+            padding: 12px 0 12px 24px;
+            border-left: 1px solid rgba(215,183,125,0.6);
+            text-shadow: 0 2px 5px rgba(0,0,0,0.65);
+        }
+
+        .slogan p {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 11px;
+            letter-spacing: 2px;
+            color: #fff;
+            line-height: 1.8;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .slogan-line {
+            width: 54px;
+            height: 2px;
+            background-color: #d7b77d;
+            margin-left: auto;
+            margin-top: 9px;
+        }
+
+        /* --- Contact Info Bar --- */
+        .contact-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+            padding: 13px 32px;
+            border-bottom: 1px solid #e4e0d8;
+            font-size: 10px;
+            color: #37424a;
+            background-color: #fbfaf8;
+            position: relative;
+            z-index: 10;
+        }
+
+        .contact-item {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+        }
+
+        .contact-item i {
+            display: grid;
+            place-items: center;
+            flex: 0 0 28px;
+            width: 28px;
+            height: 28px;
+            border: 1px solid #e5d8c3;
+            border-radius: 50%;
+            font-size: 11px;
+            color: #a47b45;
+        }
+
+        .template-notice {
+            padding: 9px 30px;
+            border-bottom: 1px solid #e4e0d8;
+            background-color: #faf8f4;
+            color: #64717c;
+            font-size: 10px;
+            text-align: center;
+        }
+
+        @media (max-width: 640px) {
+            .top-banner {
+                padding: 18px 20px;
+                min-height: auto;
+                align-items: flex-start;
+                flex-direction: column;
+                gap: 14px;
+            }
+
+            .top-banner::before {
+                width: 62%;
+            }
+
+            .brand-logo-img {
+                width: 56px;
+                height: 56px;
+            }
+
+            .logo-area {
+                gap: 10px;
+            }
+
+            .logo-text h1,
+            .logo-text h2 {
+                font-size: 23px;
+                letter-spacing: 2.5px;
+            }
+
+            .logo-subtext {
+                font-size: 6px;
+                letter-spacing: 0.55px;
+            }
+
+            .slogan {
+                align-self: flex-end;
+                padding: 0;
+                border-left: 0;
+            }
+
+            .slogan p {
+                font-size: 9px;
+                letter-spacing: 1.2px;
+            }
+
+            .contact-bar {
+                flex-wrap: wrap;
+                justify-content: flex-start;
+                gap: 10px 18px;
+                padding: 12px 20px;
+            }
+
+            .contact-item {
+                font-size: 9px;
+            }
+        }
+
+        @media (max-width: 420px) {
+            .top-banner {
+                align-items: flex-start;
+                flex-direction: column;
+                gap: 14px;
+            }
+
+            .top-banner::before {
+                width: 100%;
+                opacity: 0.55;
+            }
+
+            .slogan {
+                align-self: flex-end;
+                padding: 0;
+                border-left: 0;
+            }
+
+            .slogan p {
+                font-size: 8px;
+                line-height: 1.5;
+            }
+        }
+
+        /* --- Main Content Area --- */
+        .content {
+            padding: 35px 30px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* --- WATERMARK --- */
+        .watermark-svg {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: min(58%, 430px);
+            max-width: 100%;
+            height: auto;
+            aspect-ratio: 1;
+            opacity: 0.04;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Ensure all content sits above the watermark */
+        .invoice-header, 
+        .bill-to, 
+        .table-container, 
+        .totals-wrapper, 
+        .payment-mode, 
+        .terms-signature-wrapper {
+            position: relative;
+            z-index: 1;
+        }
+
+        /* --- Invoice Title & Meta --- */
+        .invoice-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 25px;
+        }
+
+        .invoice-title {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 44px;
+            font-weight: 800;
+            letter-spacing: 6px;
+            color: #111;
+            margin-top: 10px;
+        }
+
+        .invoice-meta {
+            font-size: 12px;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .invoice-meta table {
+            border-collapse: collapse;
+        }
+
+        .invoice-meta td {
+            padding: 5px 8px;
+        }
+
+        .invoice-meta td:nth-child(2) {
+            padding: 5px 12px;
+        }
+
+        .invoice-meta td:first-child {
+            font-weight: 700;
+            color: #111;
+        }
+
+        /* --- Bill To --- */
+        .bill-to {
+            background-color: #fbfaf8;
+            padding: 18px 20px;
+            margin-bottom: 30px;
+            border-left: 3px solid #c89b5b;
+            width: 45%;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+        }
+
+        .bill-to strong {
+            display: block;
+            font-size: 13px;
+            margin-bottom: 8px;
+            color: #111;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .bill-to p {
+            font-size: 12px;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        /* --- Table --- */
+        .table-container {
+            margin-bottom: 25px;
+        }
+
+        table.items {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        table.items th {
+            background-color: #b38546;
+            color: #fff;
+            text-align: center;
+            padding: 14px 10px;
+            font-weight: 600;
+            font-size: 12px;
+            border: 1px solid #a5793b;
+            letter-spacing: 0.5px;
+        }
+
+        table.items td {
+            padding: 14px 10px;
+            border: 1px solid #e0e0e0;
+            text-align: center;
+            font-size: 12px;
+            /* Semi-transparent background to show the watermark through the table */
+            background-color: rgba(255, 255, 255, 0.75); 
+            color: #333;
+        }
+
+        table.items td:nth-child(2) {
+            text-align: left;
+            font-weight: 600;
+        }
+
+        table.items td:nth-child(5),
+        table.items td:nth-child(6) {
+            text-align: right;
+        }
+
+        .empty-row td {
+            height: 25px;
+            border-bottom: 1px solid #eee;
+        }
+
+        /* --- Totals Section --- */
+        .totals-wrapper {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 30px;
+        }
+
+        .amount-in-words {
+            background-color: #fbfaf8;
+            padding: 15px 20px;
+            width: 52%;
+            border-left: 3px solid #c89b5b;
+            font-size: 12px;
+            color: #333;
+            margin-top: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+        }
+
+        .amount-in-words strong {
+            display: block;
+            margin-bottom: 8px;
+            color: #111;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .totals-table {
+            width: 42%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+
+        .totals-table td {
+            padding: 12px 15px;
+            border: 1px solid #e0e0e0;
+            color: #333;
+        }
+
+        .totals-table td:first-child {
+            font-weight: 600;
+            background-color: #f8f8f8;
+        }
+
+        .totals-table td:last-child {
+            text-align: right;
+            font-weight: 600;
+        }
+
+        .totals-table tr.grand-total td {
+            background-color: #b38546;
+            color: #fff;
+            font-weight: 700;
+            font-size: 15px;
+            border-color: #b38546;
+            letter-spacing: 0.5px;
+        }
+
+        /* --- Payment Mode --- */
+        .payment-mode {
+            margin-bottom: 35px;
+        }
+
+        .payment-mode strong {
+            display: block;
+            margin-bottom: 12px;
+            font-size: 13px;
+            color: #111;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .payment-options {
+            display: flex;
+            gap: 30px;
+            font-size: 12px;
+            color: #333;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 600;
+        }
+
+        /* Custom styling for the single query output */
+        .custom-checkbox {
+            appearance: none;
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border: 1.5px solid #444;
+            border-radius: 3px;
+            display: inline-block;
+            position: relative;
+            background-color: #fff;
+            margin: 0;
+        }
+
+        .custom-checkbox:checked::after {
+            content: '\f00c';
+            font-family: 'FontAwesome';
+            font-size: 12px;
+            color: #b38546;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        /* --- Terms & Conditions & Signature --- */
+        .terms-signature-wrapper {
+            display: flex;
+            justify-content: space-between;
+            position: relative;
+        }
+
+        .terms {
+            border: 1px solid #e0e0e0;
+            padding: 18px 20px;
+            border-radius: 6px;
+            width: 60%;
+            font-size: 11px;
+            color: #555;
+            background-color: rgba(255, 255, 255, 0.8);
+        }
+
+        .terms strong {
+            display: block;
+            margin-bottom: 10px;
+            color: #111;
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .terms ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .terms li {
+            position: relative;
+            padding-left: 15px;
+            margin-bottom: 6px;
+        }
+
+        .terms li::before {
+            content: '•';
+            position: absolute;
+            left: 0;
+            color: #b38546;
+            font-size: 16px;
+            top: -3px;
+        }
+
+        /* --- Signature Area --- */
+        .signature-area {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            margin-top: -90px; 
+            width: 35%;
+        }
+
+        .signature-box {
+            text-align: right;
+            position: relative;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+
+        .signature-title {
+            font-weight: 700;
+            font-size: 12px;
+            margin-bottom: 70px;
+            color: #111;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* --- NEW STAMP IMAGE --- */
+        .stamp-img {
+            width: 130px;
+            height: 130px;
+            object-fit: contain;
+            position: absolute;
+            top: 25px;
+            left: 50%;
+            transform: translateX(-50%) rotate(-8deg);
+            opacity: 0.85; /* Slight transparency for realistic ink look */
+            z-index: 2;
+            pointer-events: none; /* Prevents interfering with clicks */
+        }
+
+        .signature-line {
+            border-top: 1px solid #333;
+            width: 180px;
+            padding-top: 5px;
+            font-size: 11px;
+            font-weight: 600;
+            color: #111;
+            margin-top: 85px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            position: relative;
+            z-index: 3;
+        }
+
+        /* --- Footer --- */
+        .footer {
+            background-color: #111;
+            color: #fff;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 30px;
+            position: relative;
+            height: 75px;
+            z-index: 10;
+        }
+
+        .footer-icons {
+            display: flex;
+            gap: 25px;
+            font-size: 10px;
+            letter-spacing: 1.5px;
+            font-weight: 600;
+            z-index: 2;
+            position: relative; 
+            padding-right: 200px; /* Prevents overlap with Thank You banner */
+        }
+
+        .footer-icon-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .footer-icon-item i {
+            color: #c89b5b;
+            font-size: 18px;
+        }
+
+        .footer-thankyou {
+            background-color: #9b7341;
+            position: absolute;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            padding: 0 45px 0 70px;
+            display: flex;
+            align-items: center;
+            clip-path: polygon(15% 0, 100% 0, 100% 100%, 0% 100%);
+            z-index: 1;
+        }
+
+        .thankyou-text {
+            text-align: right;
+            margin-left: 20px;
+        }
+
+        .thankyou-text h3 {
+            font-family: 'Brush Script MT', cursive;
+            font-size: 34px;
+            font-weight: normal;
+            margin-bottom: 0px;
+            color: #fff;
+        }
+
+        .thankyou-text p {
+            font-size: 9px;
+            letter-spacing: 2px;
+            color: #eee;
+            font-weight: 600;
+        }
+
+        .text-gold { color: #c89b5b; }
+        
+        @page {
+            size: A4 portrait;
+            margin: 0;
+        }
+
+        @media print {
+            html,
+            body {
+                width: 100%;
+                margin: 0;
+                padding: 0;
+                background: #fff;
+                font-size: 9px;
+                line-height: 1.3;
+            }
+
+            .invoice-container {
+                width: 210mm;
+                height: 297mm;
+                max-width: none;
+                margin: 0 auto;
+                overflow: hidden;
+                border-radius: 0;
+                box-shadow: none;
+            }
+
+            .invoice-page-content {
+                width: 100%;
+                height: 297mm;
+                display: flex;
+                flex-direction: column;
+                transform: scale(var(--invoice-print-scale, 1));
+                transform-origin: top center;
+            }
+
+            .top-banner {
+                min-height: 0;
+                height: 116px;
+                flex: 0 0 116px;
+                padding: 14px 26px;
+                border-bottom-width: 2px;
+                print-color-adjust: exact;
+                -webkit-print-color-adjust: exact;
+            }
+
+            .top-banner::before {
+                print-color-adjust: exact;
+                -webkit-print-color-adjust: exact;
+            }
+
+            .brand-logo-img {
+                width: 76px;
+                height: 76px;
+            }
+
+            .logo-area {
+                gap: 18px;
+            }
+
+            .logo-text h1,
+            .logo-text h2 {
+                font-size: 27px;
+                letter-spacing: 3px;
+            }
+
+            .logo-text h2 {
+                margin-bottom: 7px;
+            }
+
+            .logo-subtext {
+                padding-top: 5px;
+                font-size: 7px;
+                letter-spacing: 1px;
+            }
+
+            .slogan {
+                padding: 6px 0 6px 16px;
+            }
+
+            .slogan p {
+                font-size: 9px;
+                line-height: 1.4;
+                letter-spacing: 1.5px;
+            }
+
+            .slogan-line {
+                width: 46px;
+                margin-top: 6px;
+            }
+
+            .contact-bar {
+                gap: 10px;
+                padding: 6px 18px;
+                font-size: 8px;
+            }
+
+            .contact-item {
+                align-items: center;
+                gap: 5px;
+            }
+
+            .contact-item i {
+                flex-basis: 20px;
+                width: 20px;
+                height: 20px;
+                font-size: 8px;
+            }
+
+            .template-notice {
+                display: none !important;
+            }
+
+            .content {
+                flex: 1 1 auto;
+                min-height: 0;
+                padding: 20px 26px 18px;
+                display: flex;
+                flex-direction: column;
+                justify-content: flex-start;
+                gap: 16px;
+                overflow: visible;
+            }
+
+            .watermark-svg {
+                width: min(52%, 360px);
+                opacity: .035;
+            }
+
+            .invoice-header {
+                flex: 0 0 auto;
+                align-items: center;
+                margin-bottom: 0;
+            }
+
+            .invoice-title {
+                margin-top: 4px;
+                font-size: 36px;
+                letter-spacing: 5px;
+            }
+
+            .invoice-meta {
+                font-size: 12px;
+                line-height: 1.4;
+            }
+
+            .invoice-meta td {
+                padding: 4px 6px;
+            }
+
+            .invoice-meta td:first-child {
+                white-space: nowrap;
+            }
+
+            .invoice-meta td:nth-child(2) {
+                padding: 4px 7px;
+            }
+
+            .bill-to {
+                width: 48%;
+                flex: 0 0 auto;
+                margin-bottom: 0;
+                padding: 12px 15px;
+                box-shadow: none;
+            }
+
+            .bill-to strong {
+                margin-bottom: 5px;
+                font-size: 11px;
+            }
+
+            .bill-to p {
+                font-size: 10px;
+                line-height: 1.45;
+            }
+
+            .table-container {
+                flex: 0 0 auto;
+                margin-bottom: 0;
+            }
+
+            table.items th {
+                padding: 10px 8px;
+                font-size: 10px;
+            }
+
+            table.items td {
+                padding: 11px 8px;
+                font-size: 10px;
+                background-color: rgba(255, 255, 255, .9);
+            }
+
+            .empty-row {
+                display: none;
+            }
+
+            .totals-wrapper {
+                flex: 0 0 auto;
+                align-items: flex-start;
+                margin-bottom: 0;
+            }
+
+            .amount-in-words {
+                align-self: flex-start;
+                flex: 0 1 52%;
+                height: auto;
+                min-height: 0;
+                margin-top: 0;
+                padding: 14px 17px;
+                font-size: 10px;
+                box-shadow: none;
+            }
+
+            .amount-in-words strong {
+                margin-bottom: 7px;
+                font-size: 10px;
+            }
+
+            .totals-table {
+                align-self: flex-start;
+                flex: 0 1 42%;
+                height: auto;
+                font-size: 10px;
+            }
+
+            .totals-table td {
+                padding: 10px 13px;
+            }
+
+            .totals-table tr.grand-total td {
+                padding-top: 12px;
+                padding-bottom: 12px;
+                font-size: 13px;
+            }
+
+            .payment-mode {
+                flex: 0 0 auto;
+                margin-bottom: 0;
+            }
+
+            .payment-mode strong {
+                margin-bottom: 8px;
+                font-size: 11px;
+            }
+
+            .payment-options {
+                gap: 12px;
+                font-size: 10px;
+            }
+
+            .checkbox-item {
+                gap: 6px;
+            }
+
+            .custom-checkbox {
+                width: 13px;
+                height: 13px;
+            }
+
+            .terms-signature-wrapper {
+                align-items: flex-start;
+                justify-content: space-between;
+                gap: 18px;
+                break-inside: avoid;
+                page-break-inside: avoid;
+            }
+
+            .terms {
+                flex: 1 1 60%;
+                min-width: 0;
+                width: auto;
+                padding: 13px 16px;
+                font-size: 10px;
+            }
+
+            .terms strong {
+                margin-bottom: 8px;
+                font-size: 11px;
+            }
+
+            .terms li {
+                margin-bottom: 4px;
+            }
+
+            .signature-area {
+                flex: 0 0 35%;
+                width: 35%;
+                margin-top: 0;
+                margin-left: auto;
+            }
+
+            .signature-title {
+                margin-bottom: 50px;
+                font-size: 10px;
+            }
+
+            .stamp-img {
+                width: 84px;
+                height: 84px;
+                top: 20px;
+                left: auto;
+                right: 12px;
+                transform: rotate(-8deg);
+            }
+
+            .signature-line {
+                width: 160px;
+                margin-top: 50px;
+                padding-top: 5px;
+                font-size: 9px;
+            }
+
+            .footer {
+                height: 58px;
+                flex: 0 0 58px;
+                margin-top: 0;
+                padding: 10px 22px;
+                break-inside: avoid;
+                page-break-inside: avoid;
+                print-color-adjust: exact;
+                -webkit-print-color-adjust: exact;
+            }
+
+            .footer-thankyou {
+                padding: 0 25px 0 40px;
+            }
+
+            .thankyou-text h3 {
+                font-size: 26px;
+            }
+
+            .thankyou-text p {
+                font-size: 8px;
+                letter-spacing: 1.2px;
+            }
+
+            .table-container,
+            .totals-wrapper,
+            .payment-mode {
+                break-inside: avoid;
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="invoice-container">
+        <div class="invoice-page-content">
+        <!-- Top Header with Assets -->
+        <div class="top-banner">
+            <div class="logo-area">
+                <!-- Left Image Asset -->
+                <img src="assets/dtc-logo.png" alt="Shop logo" class="brand-logo-img">
+                <div class="logo-text">
+                    <h1 data-invoice="shop-name-first">DEVI</h1>
+                    <h2 data-invoice="shop-name-rest">TIMES</h2>
+                    <div class="logo-subtext" data-invoice="shop-tagline">WATCHES &nbsp;|&nbsp; CLOCKS &nbsp;|&nbsp; ACCESSORIES &nbsp;|&nbsp; SERVICE</div>
+                </div>
+            </div>
+            <div class="slogan">
+                <p>TIME<br>FOR A<br>BETTER<br>TOMORROW</p>
+                <div class="slogan-line"></div>
+            </div>
+        </div>
+
+        <!-- Contact Bar -->
+        <div class="contact-bar">
+            <div class="contact-item">
+                <i class="fa-solid fa-location-dot"></i>
+                <div>
+                    <span data-invoice="shop-address">Shop address from settings</span>
+                </div>
+            </div>
+            <div class="contact-item">
+                <i class="fa-solid fa-phone"></i>
+                <div data-invoice="shop-phone">Phone from settings</div>
+            </div>
+            <div class="contact-item">
+                <i class="fa-regular fa-envelope"></i>
+                <div data-invoice="shop-email">Email from settings</div>
+            </div>
+            <div class="contact-item">
+                <i class="fa-regular fa-id-card"></i>
+                <div data-invoice="shop-gstin">GSTIN from settings</div>
+            </div>
+        </div>
+
+        <div class="template-notice">
+            This layout preview contains no bill data. Print an invoice from the billing app to load saved invoice details and shop settings.
+        </div>
+
+        <!-- Main Content -->
+        <div class="content">
+            
+            <!-- Premium Watermark covering the whole body -->
+            <svg class="watermark-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="50" cy="50" r="48" fill="none" stroke="#000" stroke-width="0.3"/>
+                <circle cx="50" cy="50" r="45" fill="none" stroke="#000" stroke-width="0.1"/>
+                <!-- 12 markers -->
+                <line x1="50" y1="2" x2="50" y2="6" stroke="#000" stroke-width="1"/>
+                <line x1="50" y1="94" x2="50" y2="98" stroke="#000" stroke-width="1"/>
+                <line x1="2" y1="50" x2="6" y2="50" stroke="#000" stroke-width="1"/>
+                <line x1="94" y1="50" x2="98" y2="50" stroke="#000" stroke-width="1"/>
+                <!-- Hands -->
+                <line x1="50" y1="50" x2="50" y2="15" stroke="#000" stroke-width="1" stroke-linecap="round"/>
+                <line x1="50" y1="50" x2="75" y2="60" stroke="#000" stroke-width="1.5" stroke-linecap="round"/>
+                <circle cx="50" cy="50" r="1.5" fill="#000"/>
+                <!-- Roman Numerals -->
+                <text x="50" y="20" font-family="serif" font-size="5" text-anchor="middle" fill="#000">XII</text>
+                <text x="50" y="85" font-family="serif" font-size="5" text-anchor="middle" fill="#000">VI</text>
+                <text x="15" y="52" font-family="serif" font-size="5" text-anchor="middle" fill="#000">IX</text>
+                <text x="85" y="52" font-family="serif" font-size="5" text-anchor="middle" fill="#000">III</text>
+            </svg>
+
+            <div class="invoice-header">
+                <div class="invoice-title">INVOICE</div>
+                <div class="invoice-meta">
+                    <table>
+                        <tr>
+                            <td>Invoice No</td>
+                            <td>:</td>
+                            <td data-invoice="invoice-number">Invoice number from saved bill</td>
+                        </tr>
+                        <tr>
+                            <td>Invoice Date</td>
+                            <td>:</td>
+                            <td data-invoice="invoice-date">Date from saved bill</td>
+                        </tr>
+                        <tr>
+                            <td>Bill Type</td>
+                            <td>:</td>
+                            <td data-invoice="invoice-type">Payment details from saved bill</td>
+                        </tr>
+                        <tr>
+                            <td>Sales Person</td>
+                            <td>:</td>
+                            <td data-invoice="sales-person">Staff member from saved bill</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <div class="bill-to">
+                <strong>Bill To</strong>
+                <p>
+                    <b data-invoice="customer-name">Customer from saved bill</b><br>
+                    <span data-invoice="customer-details">Customer contact details from saved bill</span>
+                </p>
+            </div>
+
+            <!-- Table -->
+            <div class="table-container">
+                <table class="items">
+                    <thead>
+                        <tr>
+                            <th style="width: 6%;">S.No</th>
+                            <th style="width: 34%;">Item Description</th>
+                            <th style="width: 25%;">Item Code</th>
+                            <th style="width: 8%;">Qty</th>
+                            <th style="width: 12%;">Rate (₹)</th>
+                            <th style="width: 15%;">Amount (₹)</th>
+                        </tr>
+                    </thead>
+                    <tbody data-invoice="items">
+                        <tr>
+                            <td>1</td>
+                            <td>Item details from saved bill</td>
+                            <td>Item code from saved bill</td>
+                            <td>—</td>
+                            <td>—</td>
+                            <td>—</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Totals -->
+            <div class="totals-wrapper">
+                <div class="amount-in-words">
+                    <strong>Amount in Words</strong>
+                    <span data-invoice="amount-words">Calculated from saved invoice data</span>
+                </div>
+                <table class="totals-table">
+                    <tr>
+                        <td>Sub Total</td>
+                        <td data-invoice="subtotal">—</td>
+                    </tr>
+                    <tr>
+                        <td>Discount</td>
+                        <td data-invoice="discount">—</td>
+                    </tr>
+                    <tr>
+                        <td data-invoice="gst-label">GST</td>
+                        <td data-invoice="gst-amount">—</td>
+                    </tr>
+                    <tr class="grand-total">
+                        <td>Grand Total</td>
+                        <td data-invoice="grand-total">—</td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- Payment Mode Section (Single Query Output) -->
+            <div class="payment-mode">
+                <strong><i class="fa-solid fa-coins text-gold" style="margin-right: 8px;"></i> Payment Mode</strong>
+                <div class="payment-options">
+                    <label class="checkbox-item" data-invoice="payment-mode">
+                        <input type="radio" name="payment_mode" class="custom-checkbox" disabled> Payment method from saved bill
+                    </label>
+                </div>
+            </div>
+
+            <!-- Terms & Signature Layout -->
+            <div class="terms-signature-wrapper">
+                <div class="terms">
+                    <strong><i class="fa-solid fa-file-contract text-gold" style="margin-right: 8px;"></i> Invoice Notes</strong>
+                    <p data-invoice="notes">Notes from saved bill, when provided.</p>
+                </div>
+
+                <div class="signature-area">
+                    <div class="signature-box">
+                        <div class="signature-title" data-invoice="signature-name">For shop name from settings</div>
+
+                        <img src="assets/stamp.png" alt="Company stamp" class="stamp-img" data-invoice="stamp">
+
+                        <div class="signature-line">Authorised Signatory</div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <div class="footer-thankyou">
+                <div class="thankyou-text">
+                    <h3>Thank You</h3>
+                    <p data-invoice="invoice-footer">FOOTER FROM SETTINGS</p>
+                </div>
+            </div>
+        </div>
+        </div>
+
+    </div>
+
+    <script>
+        (() => {
+            const fitInvoiceToPage = () => {
+                const page = document.querySelector('.invoice-container');
+                const content = document.querySelector('.invoice-page-content');
+                if (!page || !content) return;
+
+                content.style.setProperty('--invoice-print-scale', '1');
+                const scale = Math.min(1, page.clientHeight / content.scrollHeight);
+                content.style.setProperty('--invoice-print-scale', String(scale));
+            };
+
+            window.addEventListener('beforeprint', fitInvoiceToPage);
+            window.addEventListener('load', fitInvoiceToPage);
+        })();
+    </script>
+</body>
+</html>

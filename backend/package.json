@@ -1,0 +1,33 @@
+{
+  "name": "backend",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test tests/password.test.ts tests/google-drive-backup.test.ts tests/auth.test.ts",
+    "db:generate": "drizzle-kit generate",
+    "db:studio": "drizzle-kit studio",
+    "db:check": "tsx scripts/check-db.ts",
+    "db:migrate": "drizzle-kit migrate"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.44.2",
+    "dotenv": "^16.6.1",
+    "hono": "^4.8.3",
+    "jose": "^6.0.11",
+    "argon2": "^0.43.0",
+    "pg": "^8.16.3",
+    "zod": "^3.25.28"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.19",
+    "@types/pg": "^8.15.5",
+    "drizzle-kit": "^0.31.4",
+    "tsx": "^4.22.3",
+    "typescript": "^5.8.3"
+  }
+}
