@@ -37,6 +37,16 @@ Billing/
 
 The Node.js API connects directly to Supabase PostgreSQL using `DATABASE_URL`. Keep the actual database password in a private `.env` file or deployment secret, never in source control.
 
+## Vercel multi-service deployment
+
+Connect the repository root as one Vercel project. The root `vercel.json` deploys three services: `backend` (Hono), `frontend` (Vite), and `alerts` (Hono). Public requests under `/api/*` go to the backend; `/alerts/*` goes to the alerts service; all other paths go to the frontend. The browser calls the backend through the same-origin `/api` path, so no service bindings are needed. The alerts service connects directly to Supabase and Green API; it does not call the backend.
+
+Set the application's environment variables in the Vercel project before deploying. The backend needs `DATABASE_URL` and `JWT_SECRET`; also configure `SETUP_KEY` and any Google Drive/login variables used by the app. The alerts service needs `DATABASE_URL`, `ALERTS_AUTH_TOKEN` (at least 32 characters), `CRON_SECRET` (at least 16 characters), `GREEN_API_ID_INSTANCE`, `GREEN_API_TOKEN_INSTANCE`, and `RECIPIENT_PHONE_NUMBER`. Keep secrets in Vercel's environment settings, not in this repository. `frontend/.env.production` uses `/api` so production requests follow the same-origin rewrite.
+
+Vercel Cron calls `GET /alerts/cron` daily at 09:00 UTC and authenticates with `Authorization: Bearer <CRON_SECRET>`. The protected manual trigger is `POST /alerts/run` with `ALERTS_AUTH_TOKEN`. The alert service's in-process timer remains for non-Vercel `npm start`; the Vercel entrypoint does not start a timer.
+
+The database-backup API invokes the external `pg_dump` executable. Vercel does not guarantee that this executable is present, so configure a compatible `PG_DUMP_PATH` or use another backup environment before relying on database backups in production.
+
 ## Prerequisites
 
 - **Node.js** 20+

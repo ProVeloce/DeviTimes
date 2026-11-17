@@ -63,7 +63,18 @@ export async function updateSettings(db: Database, updates: Partial<ShopSettings
 export async function ensureDefaultSettings(db: Database) {
   const rows = await db.select().from(settings).limit(1);
   if (rows.length === 0) {
-    await updateSettings(db, DEFAULT_SETTINGS);
+    const now = new Date();
+    await db
+      .insert(settings)
+      .values(
+        Object.entries(DEFAULT_SETTINGS).map(([key, value]) => ({
+          id: newId(),
+          key,
+          value: stringifyJson(value),
+          updatedAt: now,
+        }))
+      )
+      .onConflictDoNothing({ target: settings.key });
   }
 }
 

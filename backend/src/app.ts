@@ -86,10 +86,16 @@ app.notFound((c) =>
 
 export default app;
 
-let settingsReady = false;
+let settingsReady: Promise<void> | null = null;
+
 export async function warmDb(env: AppEnv['Bindings']) {
-  if (settingsReady) return;
-  const db = createDb(env.DATABASE_URL);
-  await ensureDefaultSettings(db);
-  settingsReady = true;
+  if (!settingsReady) {
+    const db = createDb(env.DATABASE_URL);
+    settingsReady = ensureDefaultSettings(db)
+      .catch((error: unknown) => {
+        settingsReady = null;
+        throw error;
+      });
+  }
+  await settingsReady;
 }

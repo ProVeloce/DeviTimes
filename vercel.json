@@ -1,0 +1,45 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "services": {
+    "backend": {
+      "root": "backend",
+      "framework": "hono",
+      "entrypoint": "src/vercel.ts"
+    },
+    "frontend": {
+      "root": "frontend",
+      "framework": "vite"
+    },
+    "alerts": {
+      "root": "pos-whatsapp-alerts",
+      "framework": "hono",
+      "entrypoint": "src/vercel.js"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": {
+        "service": "backend"
+      }
+    },
+    {
+      "source": "/alerts/(.*)",
+      "destination": {
+        "service": "alerts"
+      }
+    },
+    {
+      "source": "/(.*)",
+      "destination": {
+        "service": "frontend"
+      }
+    }
+  ],
+  "crons": [
+    {
+      "path": "/alerts/cron",
+      "schedule": "0 9 * * *"
+    }
+  ]
+}

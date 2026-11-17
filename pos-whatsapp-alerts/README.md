@@ -1,6 +1,6 @@
 # Low-stock WhatsApp alerts
 
-This Node.js service reads inventory from the Devi Times Supabase database and sends low-stock alerts through Green API. It runs once daily at 09:00 UTC and exposes a protected manual trigger.
+This service reads inventory from the Devi Times Supabase database and sends low-stock alerts through Green API. The Node.js server runs once daily at 09:00 UTC and exposes a protected manual trigger.
 
 ## Setup
 
@@ -14,3 +14,7 @@ This Node.js service reads inventory from the Devi Times Supabase database and s
    ```
 
 `GET /health` checks service availability. `POST /run` runs an alert check and requires `Authorization: Bearer <ALERTS_AUTH_TOKEN>`. The service listens on port 8788 by default.
+
+## Vercel
+
+The repository's Vercel project uses `src/vercel.js` as this service's Hono entrypoint; it does not start the in-process timer. Vercel Cron calls `GET /alerts/cron` daily at 09:00 UTC and requires `CRON_SECRET` (at least 16 characters) as a bearer token. Manual runs use `POST /alerts/run` and `ALERTS_AUTH_TOKEN`. Set both tokens and the database/Green API settings as Vercel project environment variables.
