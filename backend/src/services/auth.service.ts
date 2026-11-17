@@ -86,7 +86,7 @@ export function isAllowedGoogleLogin(
 export function isMatchingVerifiedGoogleEmail(
   googleEmail: string | undefined,
   emailVerified: boolean | undefined,
-  expectedEmail: string | undefined
+  expectedEmail: string | null | undefined
 ): boolean {
   return Boolean(
     googleEmail &&

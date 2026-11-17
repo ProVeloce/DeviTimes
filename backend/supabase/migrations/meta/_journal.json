@@ -22,6 +22,13 @@
       "when": 1794893998272,
       "tag": "0002_hard_rafael_vega",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1794907753324,
+      "tag": "0003_redundant_groot",
+      "breakpoints": true
     }
   ]
 }

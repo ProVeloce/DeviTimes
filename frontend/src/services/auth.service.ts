@@ -6,7 +6,6 @@ export interface UserProfile extends User {
 }
 
 export interface UpdateProfileInput {
-  email: string;
   name: string;
   currentPassword?: string;
   newPassword?: string;
@@ -23,6 +22,12 @@ export async function getGoogleLoginConfig() {
   return api<{ configured: boolean; clientId: string | null }>('/auth/google/config');
 }
 
+export async function getGoogleEmailVerificationConfig() {
+  return api<{ configured: boolean; clientId: string | null }>(
+    '/auth/google/email-verification/config'
+  );
+}
+
 export async function loginWithGoogle(code: string) {
   return api<{ token: string; user: User }>('/auth/google', {
     method: 'POST',
@@ -36,6 +41,13 @@ export async function getMe() {
 
 export async function updateMyProfile(data: UpdateProfileInput) {
   return api<{ user: UserProfile }>('/auth/me', {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function changeMyEmail(data: { email: string; code: string }) {
+  return api<{ token: string; user: UserProfile }>('/auth/me/email', {
     method: 'PUT',
     body: JSON.stringify(data),
   });

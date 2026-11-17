@@ -82,7 +82,7 @@ Google Drive backups are available to admins from **Settings → Google Drive ba
 
 1. In Google Cloud Console, enable the Google Drive API and configure the OAuth consent screen. Add the account you will connect as a test user while the app is in testing.
 2. Create an OAuth client ID of type **Web application**. Add the frontend origins you use (for example `http://localhost:5173` and `http://localhost:5174`) under **Authorized JavaScript origins**. Add the production frontend origin when deploying.
-3. Set `GOOGLE_DRIVE_CLIENT_ID` and `GOOGLE_DRIVE_CLIENT_SECRET` in the private `backend/.env`. These OAuth credentials are also used for Google sign-in. Set `GOOGLE_LOGIN_ALLOWED_EMAIL` to the verified administrator email allowed to sign in with Google. A 32-byte `GOOGLE_DRIVE_TOKEN_ENCRYPTION_KEY` is required for Drive backups; keep it private and backed up because changing it makes saved Drive connections unreadable.
+3. Set `GOOGLE_DRIVE_CLIENT_ID` and `GOOGLE_DRIVE_CLIENT_SECRET` in the private `backend/.env`. These OAuth credentials are also used for Google sign-in and for verifying login-email changes from Profile. Set `GOOGLE_LOGIN_ALLOWED_EMAIL` to the verified administrator email allowed to sign in with Google. A 32-byte `GOOGLE_DRIVE_TOKEN_ENCRYPTION_KEY` is required for Drive backups; keep it private and backed up because changing it makes saved Drive connections unreadable.
 4. Install PostgreSQL command-line tools on the API host. `pg_dump` must be on `PATH`, or set `PG_DUMP_PATH` in `backend/.env` to its absolute executable path. Use a client version matching or newer than the server.
 5. Restart the backend and open **Settings**. Choose **Connect Google Drive** for each account you want to use, signing in and approving access for each one. **Save Backup** then creates one complete PostgreSQL custom-format dump and uploads a copy to every connected account, each in its own `Devi Times Backups` folder. If no account is connected, **Save Backup** starts Google sign-in and uploads after approval.
 
@@ -135,7 +135,7 @@ npm run dev -w electron
 | **Inventory** | Stock history, adjustments (admin) |
 | **Invoices** | List, thermal print, PDF download, cancel (admin only) |
 | **Reports** | Sales, GST, inventory; CSV export (admin) |
-| **Profile** | Update your own name, username, and password |
+| **Profile** | Update your name and password; change your login email after Google verifies the same address |
 | **Manage Users** | Create, update, deactivate, and delete shop accounts (admin) |
 | **Settings** | Shop details, GST, Google Drive backup (admin) |
 
@@ -199,9 +199,11 @@ Base URL (local): `http://127.0.0.1:8787/api`. Set `VITE_API_URL` in the product
 |----------|-------------|
 | `POST /auth/login` | JWT login |
 | `GET /auth/google/config` | Check whether allowlisted Google sign-in is configured |
-| `POST /auth/google` | Sign in with a verified, allowlisted Google account |
+| `POST /auth/google` | Sign in with a verified, authorized administrator Google account |
+| `GET /auth/google/email-verification/config` | Check whether Google login-email verification is configured |
 | `GET /auth/me` | Get the signed-in user's profile |
-| `PUT /auth/me` | Update the signed-in user's profile and password |
+| `PUT /auth/me` | Update the signed-in user's name and password |
+| `PUT /auth/me/email` | Verify a Google email and change the login email |
 | `GET /auth/users` | List shop accounts (admin) |
 | `POST /auth/users` | Create a shop account (admin) |
 | `PUT /auth/users/:id` | Update a shop account (admin) |

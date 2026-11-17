@@ -94,6 +94,25 @@ export default function App() {
   const userId = useAuthStore((s) => s.user?.id);
 
   useEffect(() => {
+    const blurNumberInputOnWheel = (event: WheelEvent) => {
+      const target = event.target;
+      if (
+        target instanceof HTMLInputElement &&
+        target.type === 'number' &&
+        target === document.activeElement
+      ) {
+        target.blur();
+      }
+    };
+
+    document.addEventListener('wheel', blurNumberInputOnWheel, {
+      capture: true,
+      passive: true,
+    });
+    return () => document.removeEventListener('wheel', blurNumberInputOnWheel, true);
+  }, []);
+
+  useEffect(() => {
     void getPendingMutationCount().catch((error: unknown) => {
       useSyncStatus.getState().set({
         error: error instanceof Error ? error.message : 'Could not load offline changes.',
