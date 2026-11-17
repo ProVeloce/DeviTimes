@@ -31,7 +31,6 @@ export const updateUserSchema = z.object({
 
 export const updateProfileSchema = z
   .object({
-    email: userIdentifierSchema,
     name: z.string().trim().min(2).max(100),
     currentPassword: z.string().min(1).max(128).optional(),
     newPassword: z.string().min(6).max(128).optional(),
@@ -40,3 +39,8 @@ export const updateProfileSchema = z
     message: 'A new password is required when the current password is provided',
     path: ['newPassword'],
   });
+
+export const changeEmailSchema = z.object({
+  email: z.string().trim().email().max(254).transform((value) => value.toLowerCase()),
+  code: z.string().min(1).max(4096),
+});

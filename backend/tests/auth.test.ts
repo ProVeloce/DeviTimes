@@ -1,10 +1,13 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  getGoogleEmailVerificationConfiguration,
   getGoogleLoginConfiguration,
   isAllowedGoogleLogin,
+  isMatchingVerifiedGoogleEmail,
 } from '../src/services/auth.service.js';
 import {
+  changeEmailSchema,
   createUserSchema,
   updateProfileSchema,
   updateUserSchema,
@@ -39,6 +42,42 @@ test('Google login accepts only the verified allowlisted email', () => {
   );
   assert.equal(
     isAllowedGoogleLogin('shreyanofficial25@gmail.com', false, 'shreyanofficial25@gmail.com'),
+    false
+  );
+});
+
+test('email verification requires an exact, verified Google email', () => {
+  assert.deepEqual(
+    getGoogleEmailVerificationConfiguration({
+      clientId: 'client-id',
+      clientSecret: 'client-secret',
+    }),
+    { configured: true, clientId: 'client-id' }
+  );
+  assert.deepEqual(
+    getGoogleEmailVerificationConfiguration({ clientId: 'client-id' }),
+    { configured: false, clientId: null }
+  );
+  assert.equal(
+    isMatchingVerifiedGoogleEmail('New@Example.com', true, 'new@example.com'),
+    true
+  );
+  assert.equal(
+    isMatchingVerifiedGoogleEmail('other@example.com', true, 'new@example.com'),
+    false
+  );
+  assert.equal(
+    isMatchingVerifiedGoogleEmail('new@example.com', false, 'new@example.com'),
+    false
+  );
+
+  const parsed = changeEmailSchema.parse({
+    email: ' New@Example.com ',
+    code: 'google-oauth-code',
+  });
+  assert.equal(parsed.email, 'new@example.com');
+  assert.equal(
+    changeEmailSchema.safeParse({ email: 'not-an-email', code: 'code' }).success,
     false
   );
 });
@@ -91,15 +130,20 @@ test('user schemas normalize email and allow leaving an existing password unchan
 
 test('profile schema supports Google-only password setup and rejects incomplete password changes', () => {
   const googleOnlyProfile = updateProfileSchema.parse({
-    email: 'admin@example.com',
     name: 'Admin User',
     newPassword: 'new-secure-password',
   });
   assert.equal(googleOnlyProfile.newPassword, 'new-secure-password');
+  assert.equal(
+    'email' in updateProfileSchema.parse({
+      email: 'ignored@example.com',
+      name: 'Admin User',
+    }),
+    false
+  );
 
   assert.equal(
     updateProfileSchema.safeParse({
-      email: 'admin@example.com',
       name: 'Admin User',
       currentPassword: 'current-password',
     }).success,

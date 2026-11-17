@@ -136,65 +136,67 @@ export function InvoicesPage() {
 
       <Card>
         <CardContent className="p-0">
-          <table className="data-table w-full text-sm">
-            <thead className="bg-[var(--color-muted)] text-left text-xs uppercase text-[var(--color-muted-foreground)]">
-              <tr>
-                <th className="p-3">Invoice #</th>
-                <th className="p-3">Date</th>
-                <th className="p-3">Customer</th>
-                <th className="p-3">Total</th>
-                <th className="p-3">Status</th>
-                <th className="p-3 w-44">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {isLoading ? (
-                <tr><td colSpan={6} className="p-8 text-center">Loading...</td></tr>
-              ) : (
-                invoices.map((inv) => (
-                  <tr key={inv.id} className="border-t">
-                    <td className="p-3 font-mono text-xs font-medium">{inv.invoiceNumber}</td>
-                    <td className="p-3 text-xs">{formatDateTime(inv.createdAt)}</td>
-                    <td className="p-3">{inv.customer?.name ?? 'Walk-in'}</td>
-                    <td className="p-3 font-semibold">{formatCurrency(Number(inv.grandTotal))}</td>
-                    <td className="p-3">
-                      <Badge variant={inv.status === 'COMPLETED' ? 'success' : 'destructive'}>
-                        {inv.status}
-                      </Badge>
-                    </td>
-                    <td className="p-3">
-                      <div className="flex gap-1">
-                        <Button size="icon" variant="ghost" onClick={() => handlePrint(inv)} title="Print thermal receipt">
-                          <Printer className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button size="icon" variant="ghost" onClick={() => handlePrintFullInvoice(inv)} title="Print full A4 invoice">
-                          <FileText className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => handleDownload(inv)}
-                          title="Download full invoice (HTML)"
-                        >
-                          <FileDown className="h-3.5 w-3.5" />
-                        </Button>
-                        {isAdmin() && (inv.status === 'COMPLETED' || inv.status === 'SYNC_PENDING') && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="text-red-500 text-xs"
-                            onClick={() => handleCancel(inv)}
-                          >
-                            {inv.status === 'SYNC_PENDING' ? 'Remove' : 'Cancel'}
+          <div className="overflow-x-auto">
+            <table className="data-table w-full min-w-[720px] text-sm">
+              <thead className="bg-[var(--color-muted)] text-left text-xs uppercase text-[var(--color-muted-foreground)]">
+                <tr>
+                  <th className="p-3">Invoice #</th>
+                  <th className="p-3">Date</th>
+                  <th className="p-3">Customer</th>
+                  <th className="p-3">Total</th>
+                  <th className="p-3">Status</th>
+                  <th className="w-44 p-3">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {isLoading ? (
+                  <tr><td colSpan={6} className="p-8 text-center">Loading...</td></tr>
+                ) : (
+                  invoices.map((inv) => (
+                    <tr key={inv.id} className="border-t">
+                      <td className="p-3 font-mono text-xs font-medium">{inv.invoiceNumber}</td>
+                      <td className="p-3 text-xs">{formatDateTime(inv.createdAt)}</td>
+                      <td className="p-3">{inv.customer?.name ?? 'Walk-in'}</td>
+                      <td className="p-3 font-semibold">{formatCurrency(Number(inv.grandTotal))}</td>
+                      <td className="p-3">
+                        <Badge variant={inv.status === 'COMPLETED' ? 'success' : 'destructive'}>
+                          {inv.status}
+                        </Badge>
+                      </td>
+                      <td className="p-3">
+                        <div className="flex gap-1">
+                          <Button size="icon" variant="ghost" onClick={() => handlePrint(inv)} title="Print thermal receipt">
+                            <Printer className="h-3.5 w-3.5" />
                           </Button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                          <Button size="icon" variant="ghost" onClick={() => handlePrintFullInvoice(inv)} title="Print full A4 invoice">
+                            <FileText className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => handleDownload(inv)}
+                            title="Download full invoice (HTML)"
+                          >
+                            <FileDown className="h-3.5 w-3.5" />
+                          </Button>
+                          {isAdmin() && (inv.status === 'COMPLETED' || inv.status === 'SYNC_PENDING') && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-xs text-red-500"
+                              onClick={() => handleCancel(inv)}
+                            >
+                              {inv.status === 'SYNC_PENDING' ? 'Remove' : 'Cancel'}
+                            </Button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </CardContent>
       </Card>
     </div>

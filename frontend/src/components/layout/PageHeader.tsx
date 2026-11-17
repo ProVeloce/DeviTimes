@@ -12,7 +12,7 @@ export function PageHeader({ title, description, children, className }: PageHead
   return (
     <div
       className={cn(
-        'mb-6 flex flex-wrap items-start justify-between gap-4 border-b border-[var(--color-border)] pb-5',
+        'mb-4 flex flex-wrap items-start justify-between gap-3 border-b border-[var(--color-border)] pb-4 sm:mb-6 sm:gap-4 sm:pb-5',
         className
       )}
     >
@@ -26,7 +26,9 @@ export function PageHeader({ title, description, children, className }: PageHead
           </p>
         )}
       </div>
-      {children ? <div className="flex shrink-0 items-center gap-2">{children}</div> : null}
+      {children ? (
+        <div className="flex w-full shrink-0 flex-wrap items-center gap-2 sm:w-auto">{children}</div>
+      ) : null}
     </div>
   );
 }

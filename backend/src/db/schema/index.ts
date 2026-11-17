@@ -23,6 +23,7 @@ export const users = pgTable(
   {
     id: text('id').primaryKey(),
     email: text('email').notNull().unique(),
+    googleVerifiedEmail: text('google_verified_email'),
     password: text('password'),
     name: text('name').notNull(),
     role: text('role').$type<'ADMIN' | 'CASHIER'>().notNull().default('CASHIER'),

@@ -112,7 +112,7 @@ export function InventoryPage() {
             <CardTitle className="text-sm">Stock History</CardTitle>
           </CardHeader>
           <CardContent className="max-h-[500px] overflow-auto p-0">
-            <table className="data-table w-full text-sm">
+            <table className="data-table w-full min-w-[560px] text-sm">
               <thead className="text-left">
                 <tr>
                   <th className="p-3">Date</th>

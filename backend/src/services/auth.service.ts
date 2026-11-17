@@ -59,6 +59,17 @@ export function getGoogleLoginConfiguration(config: {
   };
 }
 
+export function getGoogleEmailVerificationConfiguration(config: {
+  clientId?: string;
+  clientSecret?: string;
+}) {
+  const configured = Boolean(config.clientId && config.clientSecret);
+  return {
+    configured,
+    clientId: configured ? config.clientId! : null,
+  };
+}
+
 export function isAllowedGoogleLogin(
   googleEmail: string | undefined,
   emailVerified: boolean | undefined,
@@ -72,16 +83,24 @@ export function isAllowedGoogleLogin(
   );
 }
 
-export async function loginWithGoogle(
-  db: Database,
-  config: { clientId?: string; clientSecret?: string; allowedEmail?: string },
-  code: string,
-  jwtSecret: string,
-  expiresIn: string
+export function isMatchingVerifiedGoogleEmail(
+  googleEmail: string | undefined,
+  emailVerified: boolean | undefined,
+  expectedEmail: string | undefined
+): boolean {
+  return Boolean(
+    googleEmail &&
+    emailVerified === true &&
+    expectedEmail &&
+    googleEmail.trim().toLowerCase() === expectedEmail.trim().toLowerCase()
+  );
+}
+
+async function verifyGoogleCode(
+  config: { clientId?: string; clientSecret?: string },
+  code: string
 ) {
-  const { configured } = getGoogleLoginConfiguration(config);
-  const allowedEmail = config.allowedEmail?.trim().toLowerCase();
-  if (!configured || !config.clientId || !config.clientSecret || !allowedEmail) {
+  if (!config.clientId || !config.clientSecret) {
     throw new AppError('Google sign-in is not configured on the server.', 503);
   }
 
@@ -110,17 +129,37 @@ export async function loginWithGoogle(
   if (!userInfoResponse.ok) {
     throw new AppError('Google sign-in could not be verified. Please try again.', 401);
   }
-  const googleUser = await userInfoResponse.json() as {
+  return await userInfoResponse.json() as {
     email?: string;
     email_verified?: boolean;
   };
-  const email = googleUser.email?.trim().toLowerCase();
-  if (!email || !isAllowedGoogleLogin(email, googleUser.email_verified, allowedEmail)) {
-    throw new AppError('This Google account is not authorized to sign in.', 403);
+}
+
+export async function loginWithGoogle(
+  db: Database,
+  config: { clientId?: string; clientSecret?: string; allowedEmail?: string },
+  code: string,
+  jwtSecret: string,
+  expiresIn: string
+) {
+  const { configured } = getGoogleLoginConfiguration(config);
+  const allowedEmail = config.allowedEmail?.trim().toLowerCase();
+  if (!configured || !config.clientId || !config.clientSecret || !allowedEmail) {
+    throw new AppError('Google sign-in is not configured on the server.', 503);
   }
 
-  const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
-  if (!user || !user.isActive || user.role !== 'ADMIN') {
+  const googleUser = await verifyGoogleCode(config, code);
+  const email = googleUser.email?.trim().toLowerCase();
+  const [user] = email
+    ? await db.select().from(users).where(eq(users.email, email)).limit(1)
+    : [];
+  const isAllowlisted = isAllowedGoogleLogin(email, googleUser.email_verified, allowedEmail);
+  const isProfileVerified = isMatchingVerifiedGoogleEmail(
+    email,
+    googleUser.email_verified,
+    user?.googleVerifiedEmail
+  );
+  if (!user || !user.isActive || user.role !== 'ADMIN' || (!isAllowlisted && !isProfileVerified)) {
     throw new AppError('This Google account is not authorized to sign in.', 403);
   }
 
@@ -252,6 +291,9 @@ export async function updateUser(
       .update(users)
       .set({
         email,
+        ...(email !== existing.email.trim().toLowerCase()
+          ? { googleVerifiedEmail: null }
+          : {}),
         name: data.name,
         role: data.role,
         isActive: data.isActive,
@@ -355,7 +397,6 @@ export async function updateOwnProfile(
   db: Database,
   userId: string,
   data: {
-    email: string;
     name: string;
     currentPassword?: string;
     newPassword?: string;
@@ -365,14 +406,6 @@ export async function updateOwnProfile(
     await tx.execute(sql`select pg_advisory_xact_lock(734129085)`);
     const [existing] = await tx.select().from(users).where(eq(users.id, userId)).limit(1);
     if (!existing || !existing.isActive) throw new AppError('User account is unavailable', 404);
-
-    const email = data.email.trim().toLowerCase();
-    const [duplicate] = await tx
-      .select({ id: users.id })
-      .from(users)
-      .where(and(sql`lower(${users.email}) = ${email}`, ne(users.id, userId)))
-      .limit(1);
-    if (duplicate) throw new AppError('Username already in use', 409);
 
     if (data.currentPassword && !data.newPassword) {
       throw new AppError('Enter a new password to change your password', 400);
@@ -388,21 +421,10 @@ export async function updateOwnProfile(
         throw new AppError('Current password is incorrect', 400);
       }
     }
-    if (
-      !existing.password &&
-      email !== existing.email.trim().toLowerCase() &&
-      !data.newPassword
-    ) {
-      throw new AppError(
-        'Set a password before changing the username on this Google-only account',
-        409
-      );
-    }
 
     await tx
       .update(users)
       .set({
-        email,
         name: data.name,
         ...(data.newPassword ? { password: await hashPassword(data.newPassword) } : {}),
         updatedAt: new Date(),
@@ -422,4 +444,56 @@ export async function updateOwnProfile(
       .limit(1);
     return profile;
   });
+}
+
+export async function changeOwnEmail(
+  db: Database,
+  userId: string,
+  config: { clientId?: string; clientSecret?: string },
+  data: { email: string; code: string },
+  jwtSecret: string,
+  expiresIn: string
+) {
+  const targetEmail = data.email.trim().toLowerCase();
+  const googleUser = await verifyGoogleCode(config, data.code);
+  if (
+    !isMatchingVerifiedGoogleEmail(
+      googleUser.email,
+      googleUser.email_verified,
+      targetEmail
+    )
+  ) {
+    throw new AppError('The verified Google email must match the new login email.', 403);
+  }
+
+  const updatedUser = await db.transaction(async (tx) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(734129085)`);
+    const [existing] = await tx.select().from(users).where(eq(users.id, userId)).limit(1);
+    if (!existing || !existing.isActive) throw new AppError('User account is unavailable', 404);
+
+    const [duplicate] = await tx
+      .select({ id: users.id })
+      .from(users)
+      .where(and(sql`lower(${users.email}) = ${targetEmail}`, ne(users.id, userId)))
+      .limit(1);
+    if (duplicate) throw new AppError('This email is already in use.', 409);
+
+    const [user] = await tx
+      .update(users)
+      .set({
+        email: targetEmail,
+        googleVerifiedEmail: targetEmail,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    if (!user) throw new AppError('User account is unavailable', 404);
+    return user;
+  });
+
+  const result = await createLoginResult(updatedUser, jwtSecret, expiresIn);
+  return {
+    ...result,
+    user: { ...result.user, hasPassword: Boolean(updatedUser.password) },
+  };
 }

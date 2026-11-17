@@ -1,4 +1,4 @@
-const CACHE_NAME = 'devi-times-shell-v1';
+const CACHE_NAME = 'devi-times-shell-v2';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -12,26 +12,31 @@ self.addEventListener('install', (event) => {
       await cache.addAll([...new Set(assets)]);
     })()
   );
-  self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(
+    (async () => {
+      const keys = await caches.keys();
+      await Promise.all(
         keys
           .filter((key) => key.startsWith('devi-times-shell-') && key !== CACHE_NAME)
           .map((key) => caches.delete(key))
-      )
-    )
+      );
+      await self.clients.claim();
+    })()
   );
-  self.clients.claim();
 });
 
 self.addEventListener('fetch', (event) => {
   const request = event.request;
   const url = new URL(request.url);
-  if (request.method !== 'GET' || url.origin !== self.location.origin || url.pathname.startsWith('/api/')) {
+  if (
+    request.method !== 'GET' ||
+    url.origin !== self.location.origin ||
+    url.pathname === '/api' ||
+    url.pathname.startsWith('/api/')
+  ) {
     return;
   }
 

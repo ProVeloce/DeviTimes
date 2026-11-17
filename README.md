@@ -74,6 +74,8 @@ This creates the application tables in Supabase without transferring old data. I
 npm run dev
 ```
 
+Run this from the repository root to start both the frontend and API. Starting only `npm run dev -w frontend` does not start the API, so requests to port `8787` will be refused.
+
 ### Configure Google Drive backups
 
 Google Drive backups are available to admins from **Settings → Google Drive backup**. The first setup requires a Google OAuth client:
@@ -97,6 +99,12 @@ Offline invoices use a temporary `OFFLINE-…` reference until the server assign
 ```bash
 npm run db:migrate -w backend
 ```
+
+### Responsive web app and installation
+
+The web app keeps its desktop sidebar, uses a compact icon rail at tablet widths, and provides a navigation drawer in mobile browsers. When installed on a phone, it switches to bottom tabs with the remaining role-authorized pages under **More**. Admin and cashier permissions are unchanged.
+
+Serve the frontend over HTTPS (or localhost during development), then use the browser's **Install** or **Add to Home Screen** action where available. The web manifest and service worker provide the installable app shell; `/api` requests are not intercepted or cached. Offline data and queued changes continue to use the app's existing local-storage and synchronization workflows.
 
 - Frontend: http://localhost:5173  
 - API: http://127.0.0.1:8787/api

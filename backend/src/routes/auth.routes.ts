@@ -5,6 +5,7 @@ import { createDb } from '../db/index.js';
 import {
   loginSchema,
   createUserSchema,
+  changeEmailSchema,
   updateProfileSchema,
   updateUserSchema,
 } from '../validators/auth.js';
@@ -22,6 +23,13 @@ auth.get('/google/config', (c) =>
     clientId: c.env.GOOGLE_DRIVE_CLIENT_ID,
     clientSecret: c.env.GOOGLE_DRIVE_CLIENT_SECRET,
     allowedEmail: c.env.GOOGLE_LOGIN_ALLOWED_EMAIL,
+  }))
+);
+
+auth.get('/google/email-verification/config', (c) =>
+  ok(c, authService.getGoogleEmailVerificationConfiguration({
+    clientId: c.env.GOOGLE_DRIVE_CLIENT_ID,
+    clientSecret: c.env.GOOGLE_DRIVE_CLIENT_SECRET,
   }))
 );
 
@@ -73,6 +81,26 @@ auth.put('/me', authMiddleware, async (c) => {
   const db = createDb(c.env.DATABASE_URL);
   const user = await authService.updateOwnProfile(db, c.get('userId'), body);
   return ok(c, { user }, 'Profile updated');
+});
+
+auth.put('/me/email', authMiddleware, async (c) => {
+  if (!c.env.JWT_SECRET) {
+    return fail(c, 'Server configuration error: JWT_SECRET is not set', 500);
+  }
+  const body = changeEmailSchema.parse(await c.req.json());
+  const db = createDb(c.env.DATABASE_URL);
+  const result = await authService.changeOwnEmail(
+    db,
+    c.get('userId'),
+    {
+      clientId: c.env.GOOGLE_DRIVE_CLIENT_ID,
+      clientSecret: c.env.GOOGLE_DRIVE_CLIENT_SECRET,
+    },
+    body,
+    c.env.JWT_SECRET,
+    c.env.JWT_EXPIRES_IN ?? '7d'
+  );
+  return ok(c, result, 'Login email updated');
 });
 
 auth.post('/logout', authMiddleware, (c) => ok(c, null, 'Logged out'));

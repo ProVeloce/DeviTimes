@@ -235,9 +235,9 @@ export function PosPage() {
         <Badge variant="accent">POS</Badge>
       </PageHeader>
 
-      <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[280px_1fr_300px]">
+      <div className="grid min-w-0 flex-1 gap-3 lg:grid-cols-[280px_minmax(0,1fr)_300px]">
         {/* LEFT — Search & Products */}
-        <Card className="flex flex-col overflow-hidden">
+        <Card className="flex h-[min(22rem,42vh)] min-h-60 flex-col overflow-hidden lg:h-auto">
           <CardHeader className="space-y-2 p-3 pb-2">
             <div className="relative">
               <Barcode className="absolute left-2.5 top-2.5 h-4 w-4 text-[var(--color-muted-foreground)]" />
@@ -268,7 +268,7 @@ export function PosPage() {
               <button
                 type="button"
                 onClick={() => setCategoryId('')}
-                className={`rounded-md px-2 py-0.5 text-[10px] font-medium ${
+                className={`min-h-9 rounded-md px-2 text-xs font-medium ${
                   !categoryId ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-muted)]'
                 }`}
               >
@@ -279,7 +279,7 @@ export function PosPage() {
                   key={c.id}
                   type="button"
                   onClick={() => setCategoryId(c.id)}
-                  className={`rounded-md px-2 py-0.5 text-[10px] font-medium ${
+                  className={`min-h-9 rounded-md px-2 text-xs font-medium ${
                     categoryId === c.id
                       ? 'bg-[var(--color-primary)] text-white'
                       : 'bg-[var(--color-muted)]'
@@ -296,7 +296,7 @@ export function PosPage() {
                 <button
                   key={p.id}
                   type="button"
-                  className="w-full rounded-lg border border-transparent px-2 py-2 text-left transition-colors hover:border-[var(--color-border)] hover:bg-[var(--color-muted)]"
+                  className="min-h-11 w-full rounded-lg border border-transparent px-2 py-2 text-left transition-colors hover:border-[var(--color-border)] hover:bg-[var(--color-muted)]"
                   onClick={() => {
                     if (p.hasVariants && p.variants?.length) {
                       const v = p.variants.find((x) => x.stockQuantity > 0) ?? p.variants[0];
@@ -326,20 +326,20 @@ export function PosPage() {
           <CardHeader className="flex flex-row items-center gap-2 p-3 pb-2">
             <Input
               placeholder="Customer name"
-              className="h-8 flex-1"
+              className="h-9 min-w-0 flex-1"
               value={customerName}
               onChange={(e) => setCustomer(e.target.value, customerPhone)}
             />
             <Input
               placeholder="Phone"
-              className="h-8 w-32"
+              className="h-9 w-28 shrink-0 sm:w-32"
               value={customerPhone}
               onChange={(e) => setCustomer(customerName, e.target.value)}
             />
           </CardHeader>
           <CardContent className="flex min-h-0 flex-1 flex-col p-0">
-            <div className="flex-1 overflow-auto">
-              <table className="w-full text-xs">
+            <div className="min-w-0 flex-1 overflow-auto">
+              <table className="w-full min-w-[760px] text-xs">
                 <thead className="sticky top-0 bg-[var(--color-muted)]">
                   <tr className="text-left text-[10px] uppercase tracking-wide text-[var(--color-muted-foreground)]">
                     <th className="w-8 p-2">#</th>
@@ -370,7 +370,8 @@ export function PosPage() {
                           <div className="flex items-center gap-0.5">
                             <button
                               type="button"
-                              className="rounded p-0.5 hover:bg-[var(--color-muted)]"
+                              aria-label={`Decrease ${line.itemName} quantity`}
+                              className="flex h-9 w-9 items-center justify-center rounded hover:bg-[var(--color-muted)]"
                               onClick={() =>
                                 updateLine(line.id, { quantity: Math.max(1, line.quantity - 1) })
                               }
@@ -380,6 +381,7 @@ export function PosPage() {
                             <input
                               type="number"
                               min={1}
+                              aria-label={`Quantity for ${line.itemName}`}
                               className="w-10 rounded border px-1 py-0.5 text-center"
                               value={line.quantity}
                               onChange={(e) =>
@@ -390,7 +392,8 @@ export function PosPage() {
                             />
                             <button
                               type="button"
-                              className="rounded p-0.5 hover:bg-[var(--color-muted)]"
+                              aria-label={`Increase ${line.itemName} quantity`}
+                              className="flex h-9 w-9 items-center justify-center rounded hover:bg-[var(--color-muted)]"
                               onClick={() => updateLine(line.id, { quantity: line.quantity + 1 })}
                             >
                               <Plus className="h-3 w-3" />
@@ -402,6 +405,7 @@ export function PosPage() {
                           <input
                             type="number"
                             min={0}
+                            aria-label={`Discount for ${line.itemName}`}
                             className="w-14 rounded border px-1 py-0.5"
                             value={line.discount}
                             onChange={(e) =>
@@ -416,8 +420,9 @@ export function PosPage() {
                         <td className="p-2">
                           <button
                             type="button"
+                            aria-label={`Remove ${line.itemName} from bill`}
                             onClick={() => removeLine(line.id)}
-                            className="text-red-500 hover:text-red-700"
+                            className="flex h-9 w-9 items-center justify-center text-red-600 hover:text-red-800"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </button>
@@ -472,7 +477,7 @@ export function PosPage() {
                   key={mode}
                   type="button"
                   onClick={() => setPaymentMode(mode)}
-                  className={`rounded-lg border py-2 text-xs font-semibold transition-colors ${
+                  className={`min-h-11 rounded-lg border py-2 text-xs font-semibold transition-colors ${
                     paymentMode === mode
                       ? 'border-[var(--color-primary)] bg-[var(--color-primary)] text-white'
                       : 'hover:bg-[var(--color-muted)]'

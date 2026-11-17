@@ -314,8 +314,8 @@ export function ReportsPage() {
             <CardHeader>
               <CardTitle className="text-sm">GST Summary — Total {formatCurrency(gst?.totalGst ?? 0)}</CardTitle>
             </CardHeader>
-            <CardContent>
-              <table className="w-full text-sm">
+            <CardContent className="overflow-x-auto">
+              <table className="w-full min-w-[22rem] text-sm">
                 <thead>
                   <tr className="text-left text-xs text-[var(--color-muted-foreground)]">
                     <th className="pb-2">Rate</th>
@@ -341,7 +341,7 @@ export function ReportsPage() {
         <Tabs.Content value="inventory" className="mt-4">
           <Card>
             <CardContent className="max-h-[500px] overflow-auto p-0">
-              <table className="w-full text-sm">
+              <table className="w-full min-w-[600px] text-sm">
                 <thead className="bg-[var(--color-muted)] text-left text-xs uppercase text-[var(--color-muted-foreground)]">
                   <tr>
                     <th className="p-3">Code</th>
