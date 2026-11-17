@@ -3,7 +3,7 @@ export function getDatabaseConnectionString(
   caCertificatePath = process.env.SUPABASE_SSL_ROOT_CERT
 ): string {
   if (!connectionString) {
-    throw new Error('DATABASE_URL is missing from backend/.env.');
+    throw new Error('DATABASE_URL is missing from the backend environment.');
   }
 
   let url: URL;
