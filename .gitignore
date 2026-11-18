@@ -7,17 +7,24 @@ build/
 .env.*
 !.env.example
 !.env.*.example
-backend/.env
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+!.dev.vars.*.example
 # Local credentials and private keys
 /Google Credentials/
+**/Google Credentials/
 *credentials*.json
 *client_secret*.json
 *service-account*.json
 *service_account*.json
 *.key
 *.pem
+*.p8
 *.p12
 *.pfx
+*.jks
+*.keystore
 *.log
 .DS_Store
 Thumbs.db
