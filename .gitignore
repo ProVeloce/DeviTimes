@@ -9,7 +9,7 @@ build/
 !.env.*.example
 backend/.env
 # Local credentials and private keys
-Google Credentials/
+/Google Credentials/
 *credentials*.json
 *client_secret*.json
 *service-account*.json
