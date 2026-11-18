@@ -112,7 +112,7 @@ function runPgDump(invocation: PgDumpInvocation, filePath: string): Promise<void
     child.once('error', (error: NodeJS.ErrnoException) => {
       if (error.code === 'ENOENT') {
         reject(new AppError(
-          'pg_dump was not found. Install PostgreSQL command-line tools that match or are newer than the server, or set PG_DUMP_PATH in backend/.env.',
+          'pg_dump was not found on the backend host. Install PostgreSQL command-line tools that match or are newer than the server, or set PG_DUMP_PATH to an executable available to the backend runtime.',
           503
         ));
         return;

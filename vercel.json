@@ -3,8 +3,8 @@
   "services": {
     "backend": {
       "root": "backend",
-      "framework": "hono",
-      "entrypoint": "src/server.mts"
+      "runtime": "container",
+      "entrypoint": "Dockerfile"
     },
     "frontend": {
       "root": "frontend",

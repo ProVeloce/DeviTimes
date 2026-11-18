@@ -51,7 +51,7 @@ npm run build -w backend
 npm run start -w backend
 ```
 
-The runtime requires `DATABASE_URL` and `JWT_SECRET`. `SETUP_KEY`, `JWT_EXPIRES_IN`, `CORS_ORIGIN`, `PORT`, and `HOST` are configurable through environment variables. To enable Google Drive backups, set `GOOGLE_DRIVE_CLIENT_ID`, `GOOGLE_DRIVE_CLIENT_SECRET`, and a private base64-encoded 32-byte `GOOGLE_DRIVE_TOKEN_ENCRYPTION_KEY`.
+The runtime requires `DATABASE_URL` and `JWT_SECRET`. `SETUP_KEY`, `JWT_EXPIRES_IN`, `CORS_ORIGIN`, `PORT`, and `HOST` are configurable through environment variables. To enable Google Drive backups, set `GOOGLE_DRIVE_CLIENT_ID`, `GOOGLE_DRIVE_CLIENT_SECRET`, and a private base64-encoded 32-byte `GOOGLE_DRIVE_TOKEN_ENCRYPTION_KEY`. The Vercel backend container includes PostgreSQL 18 client tools and sets `PG_DUMP_PATH`; local API runs need `pg_dump` on `PATH` or `PG_DUMP_PATH` in `backend/.env`.
 
 ## API
 
