@@ -1,3 +1,16 @@
+import { fileURLToPath } from 'node:url';
+
+export function resolveCaCertificatePath(
+  caCertificatePath: string,
+  platform: NodeJS.Platform = process.platform
+): string {
+  const certificatePath = caCertificatePath.trim();
+  if (platform !== 'win32' && /^[a-z]:[\\/]/i.test(certificatePath)) {
+    return fileURLToPath(new URL('../../certs/prod-ca-2021.crt', import.meta.url));
+  }
+  return certificatePath;
+}
+
 export function getDatabaseConnectionString(
   connectionString: string | undefined,
   caCertificatePath = process.env.SUPABASE_SSL_ROOT_CERT
@@ -18,8 +31,9 @@ export function getDatabaseConnectionString(
   }
 
   url.searchParams.set('sslmode', 'verify-full');
-  if (caCertificatePath?.trim()) {
-    url.searchParams.set('sslrootcert', caCertificatePath.trim());
+  const configuredCaPath = caCertificatePath?.trim() || url.searchParams.get('sslrootcert')?.trim();
+  if (configuredCaPath) {
+    url.searchParams.set('sslrootcert', resolveCaCertificatePath(configuredCaPath));
   }
 
   return url.toString();

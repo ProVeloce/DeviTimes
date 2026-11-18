@@ -34,6 +34,7 @@ ENV NODE_ENV=production
 ENV PG_DUMP_PATH=/usr/lib/postgresql/18/bin/pg_dump
 
 WORKDIR /app
+COPY certs/prod-ca-2021.crt ./certs/prod-ca-2021.crt
 COPY --from=build --chown=node:node /app/package.json ./package.json
 COPY --from=build --chown=node:node /app/node_modules ./node_modules
 COPY --from=build --chown=node:node /app/dist ./dist

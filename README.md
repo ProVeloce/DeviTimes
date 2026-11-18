@@ -45,7 +45,7 @@ Set the application's environment variables in the Vercel project before deployi
 
 Vercel Cron calls `GET /alerts/cron` daily at 09:00 UTC and authenticates with `Authorization: Bearer <CRON_SECRET>`. The protected manual trigger is `POST /alerts/run` with `ALERTS_AUTH_TOKEN`. The alert service's in-process timer remains for non-Vercel `npm start`; the Vercel entrypoint does not start a timer.
 
-The backend's Vercel container installs the official PostgreSQL 18 client from the PostgreSQL Apt Repository and sets `PG_DUMP_PATH` inside the image. No `PG_DUMP_PATH` setting is needed in Vercel. PostgreSQL 18's `pg_dump` supports PostgreSQL 18 and earlier; if the database server is upgraded beyond 18, update the client major version in `backend/Dockerfile` before deploying. Local development still needs a compatible `pg_dump` on `PATH` or `PG_DUMP_PATH` in `backend/.env`.
+The backend's Vercel container installs the official PostgreSQL 18 client from the PostgreSQL Apt Repository and sets `PG_DUMP_PATH` inside the image. It also includes the Supabase root CA certificate. If `SUPABASE_SSL_ROOT_CERT` is set to a Windows path, the backend resolves it to the bundled certificate in the Linux container while retaining full TLS verification. No `PG_DUMP_PATH` setting is needed in Vercel. PostgreSQL 18's `pg_dump` supports PostgreSQL 18 and earlier; if the database server is upgraded beyond 18, update the client major version in `backend/Dockerfile` before deploying. Local development still needs a compatible `pg_dump` on `PATH` or `PG_DUMP_PATH` in `backend/.env`.
 
 ## Prerequisites
 
