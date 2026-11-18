@@ -86,6 +86,19 @@ app.notFound((c) =>
 
 export default app;
 
+const databaseIndependentPaths = new Set([
+  '/',
+  '/health',
+  '/api/health',
+  '/api/auth/test',
+  '/api/auth/google/config',
+  '/api/auth/google/email-verification/config',
+]);
+
+export function shouldWarmDb(method: string, path: string): boolean {
+  return method !== 'OPTIONS' && !databaseIndependentPaths.has(path);
+}
+
 let settingsReady: Promise<void> | null = null;
 
 export async function warmDb(env: AppEnv['Bindings']) {

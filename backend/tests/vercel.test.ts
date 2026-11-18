@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
+import { shouldWarmDb } from '../src/app.js';
 
 delete process.env.DATABASE_URL;
 delete process.env.JWT_SECRET;
@@ -9,6 +10,13 @@ delete process.env.GOOGLE_DRIVE_CLIENT_SECRET;
 delete process.env.GOOGLE_LOGIN_ALLOWED_EMAIL;
 
 const { default: app } = await import('../src/server.mjs');
+
+test('database-independent requests do not block on a database warmup', () => {
+  assert.equal(shouldWarmDb('GET', '/api/health'), false);
+  assert.equal(shouldWarmDb('GET', '/api/auth/google/config'), false);
+  assert.equal(shouldWarmDb('OPTIONS', '/api/auth/login'), false);
+  assert.equal(shouldWarmDb('POST', '/api/auth/login'), true);
+});
 
 test('Vercel deploys the backend with the PostgreSQL client container', async () => {
   const config = JSON.parse(

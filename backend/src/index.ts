@@ -2,7 +2,7 @@ import { createServer } from 'node:http';
 import { Readable } from 'node:stream';
 import { config } from 'dotenv';
 import { fileURLToPath } from 'node:url';
-import app, { warmDb } from './app.js';
+import app, { shouldWarmDb, warmDb } from './app.js';
 import { getRuntimeEnv } from './runtime-env.js';
 
 config({ path: fileURLToPath(new URL('../.env', import.meta.url)), override: true });
@@ -50,6 +50,7 @@ async function handleRequest(
       headers,
       ...(body ? { body, duplex: 'half' as const } : {}),
     });
+    if (shouldWarmDb(method, url.pathname)) await warmDb(env);
     const response = await app.fetch(request, env);
 
     outgoing.statusCode = response.status;
@@ -77,7 +78,6 @@ async function start() {
     throw new Error('PORT must be an integer between 1 and 65535.');
   }
 
-  await warmDb(env);
   const server = createServer((incoming, outgoing) => {
     void handleRequest(incoming, outgoing);
   });
