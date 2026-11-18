@@ -130,7 +130,7 @@ function MobileNavigationDrawer({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="mobile-drawer-dialog"
+        className="mobile-drawer-dialog translate-x-0 translate-y-0"
         overlayClassName="mobile-navigation-overlay"
         showCloseButton={false}
         style={{
@@ -245,7 +245,7 @@ function MobileTabBar({
 
       <Dialog open={moreOpen} onOpenChange={onMoreOpenChange}>
         <DialogContent
-          className="mobile-more-dialog"
+          className="mobile-more-dialog translate-x-0 translate-y-0"
           overlayClassName="mobile-navigation-overlay"
           showCloseButton={false}
         >
