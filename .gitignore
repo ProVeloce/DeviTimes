@@ -4,7 +4,20 @@ dist/
 build/
 .env
 .env.local
+.env.*
+!.env.example
+!.env.*.example
 backend/.env
+# Local credentials and private keys
+Google Credentials/
+*credentials*.json
+*client_secret*.json
+*service-account*.json
+*service_account*.json
+*.key
+*.pem
+*.p12
+*.pfx
 *.log
 .DS_Store
 Thumbs.db
