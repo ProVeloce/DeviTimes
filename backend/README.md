@@ -53,6 +53,8 @@ npm run start -w backend
 
 The runtime requires `DATABASE_URL` and `JWT_SECRET`. `SETUP_KEY`, `JWT_EXPIRES_IN`, `CORS_ORIGIN`, `PORT`, and `HOST` are configurable through environment variables. To enable Google Drive backups, set `GOOGLE_DRIVE_CLIENT_ID`, `GOOGLE_DRIVE_CLIENT_SECRET`, and a private base64-encoded 32-byte `GOOGLE_DRIVE_TOKEN_ENCRYPTION_KEY`. The Vercel backend container includes PostgreSQL 18 client tools and sets `PG_DUMP_PATH`; local API runs need `pg_dump` on `PATH` or `PG_DUMP_PATH` in `backend/.env`.
 
+For Vercel production, set `DATABASE_URL` to Supabase's **Session Pooler** connection URI from **Supabase → Connect → Session pooler** (port `5432`). The direct database hostname may resolve only to IPv6; Vercel's container can then fail to connect with `ENETUNREACH`. Keep the database password URL-encoded. Do not use the transaction pooler URI for database backups.
+
 ## API
 
 Local base URL: `http://127.0.0.1:8787/api`
